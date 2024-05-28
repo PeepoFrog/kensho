@@ -1,0 +1,6 @@
+[Details]
+  Icon = "Icon.png"
+  Name = "Kensho"
+  ID = "testID.app"
+  Version = "0.0.1"
+  Build = 6
