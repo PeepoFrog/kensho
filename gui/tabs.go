@@ -28,11 +28,15 @@ var (
 			Title: "Host Terminal",
 			View:  makeTerminalScreen,
 		},
+		"logs": {
+			Title: "Logs",
+			View:  makeLogScreen,
+		},
 		"test": {},
 	}
 
 	TabsIndex = map[string][]string{
-		"":     {"status", "nodeInfo", "networkTree", "terminal"},
+		"":     {"status", "nodeInfo", "networkTree", "terminal", "logs"},
 		"test": {"a", "b"},
 	}
 )
