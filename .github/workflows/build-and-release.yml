@@ -127,6 +127,9 @@ jobs:
           name: kensho-packages
           path: downloaded-artifacts
 
+      - name: Unzip artifacts
+        run: unzip downloaded-artifacts/kensho-packages.zip -d downloaded-artifacts
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
