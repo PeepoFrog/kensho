@@ -1,6 +1,6 @@
 [Details]
   Icon = "Icon.png"
   Name = "Kensho"
-  ID = "testID.app"
-  Version = "0.0.1"
+  ID = "com.kira.kensho"
+  Version = "1.0.0"
   Build = 6
