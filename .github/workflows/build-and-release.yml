@@ -107,21 +107,29 @@ jobs:
       - name: Build DEB package for ARM64
         run: dpkg-deb --build build-arm64 kensho-arm64.deb
 
-      - name: Set output
-        id: set_output
-        run: |
-          echo "{name}={amd64_deb::kensho-amd64.deb}" >> $GITHUB_OUTPUT
-          echo "{name}={arm64_deb::kensho-arm64.deb}" >> $GITHUB_OUTPUT
-          echo "{name}={win_amd64_zip::fyne-cross/dist/windows-amd64/Kensho.exe.zip}" >> $GITHUB_OUTPUT
-          echo "{name}={win_arm64_zip::fyne-cross/dist/windows-arm64/Kensho.exe.zip}" >> $GITHUB_OUTPUT
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kensho-packages
+          path: |
+            build-amd64/kensho-amd64.deb
+            build-arm64/kensho-arm64.deb
+            fyne-cross/dist/windows-amd64/Kensho.exe.zip
+            fyne-cross/dist/windows-arm64/Kensho.exe.zip
 
   release:
     needs: build-and-ver
     runs-on: ubuntu-latest
     steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: kensho-packages
+          path: downloaded-artifacts
+
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: actions/create-release@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -129,43 +137,3 @@ jobs:
           release_name: Release ${{ needs.build-and-ver.outputs.new_version }}
           draft: false
           prerelease: false
-
-      - name: Upload AMD64 DEB Package as Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ needs.build-and-ver.outputs.amd64_deb }}
-          asset_name: kensho-amd64.deb
-          asset_content_type: application/vnd.debian.binary-package
-
-      - name: Upload ARM64 DEB Package as Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ needs.build-and-ver.outputs.arm64_deb }}
-          asset_name: kensho-arm64.deb
-          asset_content_type: application/vnd.debian.binary-package
-
-      - name: Upload Windows AMD64 EXE Package as Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ needs.build-and-ver.outputs.win_amd64_zip }}
-          asset_name: Kensho-windows-amd64.zip
-          asset_content_type: application/zip
-
-      - name: Upload Windows ARM64 EXE Package as Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ needs.build-and-ver.outputs.win_arm64_zip }}
-          asset_name: Kensho-windows-arm64.zip
-          asset_content_type: application/zip
