@@ -35,22 +35,31 @@ jobs:
           release_branches: master
           default_bump: minor
           create_annotated_tag: true
+      - name: Print the new tags
+        run: echo "${{steps.create_tag.outputs.new_tag}}"
+
 
   build:
     needs: versioning
     if: needs.versioning.outputs.new_version != ''
     runs-on: ubuntu-latest
     steps:
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Ensures tags are also fetched
 
+      - name: Check the tag avalability
+        run: |
+          VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
+          echo "TAG: ${{steps.versioning.create_tag.new_tag}}"
+          echo "VERSION: ${VERSION}"
+          echo "VERSION: $VERSION"
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22.2'
-
       - name: Install fyne-cross
         run: go install github.com/fyne-io/fyne-cross@latest
           #      - name: Install cmake v3.14.5 for osxcross
@@ -95,11 +104,11 @@ jobs:
 
       - name: Install packaging tools
         run: sudo apt-get update && sudo apt-get install -y debhelper
-      
+
       - name: Setup DEBIAN directory for AMD64
         run: |
           mkdir -p build-amd64/DEBIAN
-          VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
+          VERSION=$(echo ${{ steps.versioning.create_tag.outputs.new_tag }} | sed 's/^v//')
           echo "Package: kensho" > build-amd64/DEBIAN/control
           echo "Version: $VERSION" >> build-amd64/DEBIAN/control
           echo "Section: base" >> build-amd64/DEBIAN/control
@@ -112,7 +121,7 @@ jobs:
       - name: Setup DEBIAN directory for ARM64
         run: |
           mkdir -p build-arm64/DEBIAN
-          VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
+          VERSION=$(echo ${{ steps.versioning.create_tag.outputs.new_tag }} | sed 's/^v//')
           echo "Package: kensho" > build-arm64/DEBIAN/control
           echo "Version: $VERSION" >> build-arm64/DEBIAN/control
           echo "Section: base" >> build-arm64/DEBIAN/control
