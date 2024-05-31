@@ -23,9 +23,13 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       new_version: ${{ steps.create_tag.outputs.new_tag }}
+      amd64_deb: kensho-amd64.deb
+      arm64_deb: kensho-arm64.deb
+      win_amd64_zip: fyne-cross/dist/windows-amd64/Kensho.exe.zip
+      win_arm64_zip: fyne-cross/dist/windows-arm64/Kensho.exe.zip
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
       - name: Create and Push Tag
         id: create_tag
@@ -38,51 +42,24 @@ jobs:
 
       - name: Print the new tags
         run: |
-          echo "TAG: ${{steps.create_tag.outputs.new_tag}}"
+          echo "TAG: ${{ steps.create_tag.outputs.new_tag }}"
           VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
           echo "VERSION: $VERSION"
 
-
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v2
         with:
           go-version: '1.22.2'
+
       - name: Install fyne-cross
         run: go install github.com/fyne-io/fyne-cross@latest
-          #      - name: Install cmake v3.14.5 for osxcross
-          #        run: |
-          #          curl -sSL https://cmake.org/files/v3.14/cmake-3.14.5-Linux-x86_64.tar.gz | sudo tar -xzC /opt
-          #          export PATH=/opt/cmake-3.14.5-Linux-x86_64/bin:$PATH
-          #
-          #      - name: Install dependencies for osxcross
-          #        run: |
-          #          sudo apt-get update
-          #          sudo apt-get install -y clang llvm libxml2-dev uuid-dev libssl-dev bash patch make tar xz-utils bzip2 gzip sed cpio
-          #
-          #      - name: Clone and setup osxcross
-          #        run: |
-          #          git clone https://github.com/tpoechtrager/osxcross.git
-          #          cd osxcross
-          #          wget --no-check-certificate -O MacOSX10.15.sdk.tar.xz https://someserver.com/path/to/MacOSX10.15.sdk.tar.xz
-          #          tar -xf MacOSX10.15.sdk.tar.xz -C tarballs/
-          #          UNATTENDED=yes OSX_VERSION_MIN=10.10 ./build.sh
-          #
+
       - name: Cross-compile for Linux ARM64
         run: fyne-cross linux -arch=arm64 -app-id=com.kira.kensho
 
       - name: Cross-compile for Linux x86
         run: fyne-cross linux -arch=amd64 -app-id=com.kira.kensho
 
-          #      - name: Cross-compile for Darwin ARM64
-          #        run: |
-          #          export PATH=$PWD/osxcross/target/bin:$PATH
-          #          fyne-cross darwin -arch=arm64 -app-id=com.kira.kensho
-          #
-          #      - name: Cross-compile for Darwin x86
-          #        run: |
-          #          export PATH=$PWD/osxcross/target/bin:$PATH
-          #          fyne-cross darwin -arch=amd64 -app-id=com.kira.kensho
-          #
       - name: Cross-compile for Windows ARM64
         run: fyne-cross windows -arch=arm64 -app-id=com.kira.kensho
 
@@ -130,49 +107,16 @@ jobs:
       - name: Build DEB package for ARM64
         run: dpkg-deb --build build-arm64 kensho-arm64.deb
 
-      - name: Upload AMD64 DEB Package as Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: ./kensho-amd64.deb
-          asset_name: kensho-amd64.deb
-          asset_content_type: application/vnd.debian.binary-package
-
-      - name: Upload ARM64 DEB Package as Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: ./kensho-arm64.deb
-          asset_name: kensho-arm64.deb
-          asset_content_type: application/vnd.debian.binary-package
-
-      - name: Upload Windows AMD64 EXE Package as Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: ./fyne-cross/dist/windows-amd64/Kensho.exe.zip
-          asset_name: Kensho-windows-amd64.zip
-          asset_content_type: application/zip
-
-      - name: Upload Windows ARM64 EXE Package as Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: ./fyne-cross/dist/windows-arm64/Kensho.exe.zip
-          asset_name: Kensho-windows-arm64.zip
-          asset_content_type: application/zip
+      - name: Set output
+        id: set_output
+        run: |
+          echo "{name}={amd64_deb::kensho-amd64.deb}" >> $GITHUB_OUTPUT
+          echo "{name}={arm64_deb::kensho-arm64.deb}" >> $GITHUB_OUTPUT
+          echo "{name}={win_amd64_zip::fyne-cross/dist/windows-amd64/Kensho.exe.zip}" >> $GITHUB_OUTPUT
+          echo "{name}={win_arm64_zip::fyne-cross/dist/windows-arm64/Kensho.exe.zip}" >> $GITHUB_OUTPUT
 
   release:
     needs: build-and-ver
-    if: needs.build.outputs.asset_path != ''
     runs-on: ubuntu-latest
     steps:
       - name: Create Release
@@ -181,7 +125,47 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ needs.versioning.outputs.new_version }}
-          release_name: Release ${{ needs.versioning.outputs.new_version }}
+          tag_name: ${{ needs.build-and-ver.outputs.new_version }}
+          release_name: Release ${{ needs.build-and-ver.outputs.new_version }}
           draft: false
           prerelease: false
+
+      - name: Upload AMD64 DEB Package as Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ needs.build-and-ver.outputs.amd64_deb }}
+          asset_name: kensho-amd64.deb
+          asset_content_type: application/vnd.debian.binary-package
+
+      - name: Upload ARM64 DEB Package as Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ needs.build-and-ver.outputs.arm64_deb }}
+          asset_name: kensho-arm64.deb
+          asset_content_type: application/vnd.debian.binary-package
+
+      - name: Upload Windows AMD64 EXE Package as Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ needs.build-and-ver.outputs.win_amd64_zip }}
+          asset_name: Kensho-windows-amd64.zip
+          asset_content_type: application/zip
+
+      - name: Upload Windows ARM64 EXE Package as Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ needs.build-and-ver.outputs.win_arm64_zip }}
+          asset_name: Kensho-windows-arm64.zip
+          asset_content_type: application/zip
