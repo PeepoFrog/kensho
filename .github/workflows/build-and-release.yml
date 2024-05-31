@@ -137,3 +137,42 @@ jobs:
           release_name: Release ${{ needs.build-and-ver.outputs.new_version }}
           draft: false
           prerelease: false
+      - name: Upload AMD64 DEB Package as Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: downloaded-artifacts/kensho-amd64.deb
+          asset_name: kensho-amd64.deb
+          asset_content_type: application/vnd.debian.binary-package
+  
+      - name: Upload ARM64 DEB Package as Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: downloaded-artifacts/kensho-arm64.deb
+          asset_name: kensho-arm64.deb
+          asset_content_type: application/vnd.debian.binary-package
+  
+      - name: Upload Windows AMD64 EXE Package as Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: downloaded-artifacts/Kensho-windows-amd64.zip
+          asset_name: Kensho-windows-amd64.zip
+          asset_content_type: application/zip
+  
+      - name: Upload Windows ARM64 EXE Package as Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: downloaded-artifacts/Kensho-windows-arm64.zip
+          asset_name: Kensho-windows-arm64.zip
+          asset_content_type: application/zip
