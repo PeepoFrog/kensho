@@ -99,7 +99,7 @@ jobs:
       - name: Setup DEBIAN directory for AMD64
         run: |
           mkdir -p build-amd64/DEBIAN
-          VERSION=$(echo "${GITHUB_REF#refs/tags/}" | sed 's/^v//')
+          VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
           echo "Package: kensho" > build-amd64/DEBIAN/control
           echo "Version: $VERSION" >> build-amd64/DEBIAN/control
           echo "Section: base" >> build-amd64/DEBIAN/control
@@ -112,7 +112,7 @@ jobs:
       - name: Setup DEBIAN directory for ARM64
         run: |
           mkdir -p build-arm64/DEBIAN
-          VERSION=$(echo "${GITHUB_REF#refs/tags/}" | sed 's/^v//')
+          VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
           echo "Package: kensho" > build-arm64/DEBIAN/control
           echo "Version: $VERSION" >> build-arm64/DEBIAN/control
           echo "Section: base" >> build-arm64/DEBIAN/control
