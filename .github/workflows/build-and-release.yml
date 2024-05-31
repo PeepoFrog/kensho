@@ -68,7 +68,7 @@ jobs:
         run: |
           git clone https://github.com/tpoechtrager/osxcross.git
           cd osxcross
-          wget -O MacOSX10.15.sdk.tar.xz https://someserver.com/path/to/MacOSX10.15.sdk.tar.xz
+          wget --no-check-certificate -O MacOSX10.15.sdk.tar.xz https://someserver.com/path/to/MacOSX10.15.sdk.tar.xz
           tar -xf MacOSX10.15.sdk.tar.xz -C tarballs/
           UNATTENDED=yes OSX_VERSION_MIN=10.10 ./build.sh
 
