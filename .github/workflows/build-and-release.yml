@@ -171,7 +171,7 @@ jobs:
           asset_content_type: application/zip
 
   release:
-    needs: build
+    needs: build-and-ver
     if: needs.build.outputs.asset_path != ''
     runs-on: ubuntu-latest
     steps:
