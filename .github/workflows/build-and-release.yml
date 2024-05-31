@@ -17,7 +17,7 @@ jobs:
         id: check_merged
         run: echo "::set-output name=is_merged::${{ github.event.pull_request.merged }}"
 
-  versioning:
+  build-and-ver:
     needs: check_pr_merged
     if: needs.check_pr_merged.outputs.is_merged == 'true'
     runs-on: ubuntu-latest
@@ -25,7 +25,7 @@ jobs:
       new_version: ${{ steps.create_tag.outputs.new_tag }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Create and Push Tag
         id: create_tag
@@ -35,27 +35,14 @@ jobs:
           release_branches: master
           default_bump: minor
           create_annotated_tag: true
+
       - name: Print the new tags
-        run: echo "${{steps.create_tag.outputs.new_tag}}"
-
-
-  build:
-    needs: versioning
-    if: needs.versioning.outputs.new_version != ''
-    runs-on: ubuntu-latest
-    steps:
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Ensures tags are also fetched
-
-      - name: Check the tag avalability
         run: |
+          echo "TAG: ${{steps.create_tag.outputs.new_tag}}"
           VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
-          echo "TAG: ${{steps.versioning.create_tag.new_tag}}"
-          echo "VERSION: ${VERSION}"
           echo "VERSION: $VERSION"
+
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -108,28 +95,28 @@ jobs:
       - name: Setup DEBIAN directory for AMD64
         run: |
           mkdir -p build-amd64/DEBIAN
-          VERSION=$(echo ${{ steps.versioning.create_tag.outputs.new_tag }} | sed 's/^v//')
+          VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
           echo "Package: kensho" > build-amd64/DEBIAN/control
           echo "Version: $VERSION" >> build-amd64/DEBIAN/control
           echo "Section: base" >> build-amd64/DEBIAN/control
           echo "Priority: optional" >> build-amd64/DEBIAN/control
           echo "Architecture: amd64" >> build-amd64/DEBIAN/control
           echo "Depends: " >> build-amd64/DEBIAN/control
-          echo "Maintainer: Your Name <you@example.com>" >> build-amd64/DEBIAN/control
-          echo "Description: My Fyne Application" >> build-amd64/DEBIAN/control
+          echo "Maintainer: KIRA <hello@kira.network>" >> build-amd64/DEBIAN/control
+          echo "Description: KENSHO" >> build-amd64/DEBIAN/control
 
       - name: Setup DEBIAN directory for ARM64
         run: |
           mkdir -p build-arm64/DEBIAN
-          VERSION=$(echo ${{ steps.versioning.create_tag.outputs.new_tag }} | sed 's/^v//')
+          VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
           echo "Package: kensho" > build-arm64/DEBIAN/control
           echo "Version: $VERSION" >> build-arm64/DEBIAN/control
           echo "Section: base" >> build-arm64/DEBIAN/control
           echo "Priority: optional" >> build-arm64/DEBIAN/control
           echo "Architecture: arm64" >> build-arm64/DEBIAN/control
           echo "Depends: " >> build-arm64/DEBIAN/control
-          echo "Maintainer: Your Name <you@example.com>" >> build-arm64/DEBIAN/control
-          echo "Description: My Fyne Application" >> build-arm64/DEBIAN/control
+          echo "Maintainer: KIRA <hello@kira.network>" >> build-arm64/DEBIAN/control
+          echo "Description: KENSHO" >> build-arm64/DEBIAN/control
 
       - name: Copy application to build directory for AMD64
         run: cp fyne-cross/dist/linux-amd64/Kensho.tar.xz build-amd64/kensho
