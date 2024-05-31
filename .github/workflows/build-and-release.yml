@@ -132,6 +132,10 @@ jobs:
         with:
           name: kensho-packages
           path: downloaded-artifacts
+      - name: List directory
+        run: |
+          ls -lah
+          ls -lah downloaded-artifacts
 
       - name: Unzip artifacts
         run: unzip downloaded-artifacts/kensho-packages.zip -d downloaded-artifacts
