@@ -53,41 +53,40 @@ jobs:
 
       - name: Install fyne-cross
         run: go install github.com/fyne-io/fyne-cross@latest
-
-      - name: Install cmake v3.14.5 for osxcross
-        run: |
-          curl -sSL https://cmake.org/files/v3.14/cmake-3.14.5-Linux-x86_64.tar.gz | sudo tar -xzC /opt
-          export PATH=/opt/cmake-3.14.5-Linux-x86_64/bin:$PATH
-
-      - name: Install dependencies for osxcross
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang llvm libxml2-dev uuid-dev libssl-dev bash patch make tar xz-utils bzip2 gzip sed cpio
-
-      - name: Clone and setup osxcross
-        run: |
-          git clone https://github.com/tpoechtrager/osxcross.git
-          cd osxcross
-          wget --no-check-certificate -O MacOSX10.15.sdk.tar.xz https://someserver.com/path/to/MacOSX10.15.sdk.tar.xz
-          tar -xf MacOSX10.15.sdk.tar.xz -C tarballs/
-          UNATTENDED=yes OSX_VERSION_MIN=10.10 ./build.sh
-
+          #      - name: Install cmake v3.14.5 for osxcross
+          #        run: |
+          #          curl -sSL https://cmake.org/files/v3.14/cmake-3.14.5-Linux-x86_64.tar.gz | sudo tar -xzC /opt
+          #          export PATH=/opt/cmake-3.14.5-Linux-x86_64/bin:$PATH
+          #
+          #      - name: Install dependencies for osxcross
+          #        run: |
+          #          sudo apt-get update
+          #          sudo apt-get install -y clang llvm libxml2-dev uuid-dev libssl-dev bash patch make tar xz-utils bzip2 gzip sed cpio
+          #
+          #      - name: Clone and setup osxcross
+          #        run: |
+          #          git clone https://github.com/tpoechtrager/osxcross.git
+          #          cd osxcross
+          #          wget --no-check-certificate -O MacOSX10.15.sdk.tar.xz https://someserver.com/path/to/MacOSX10.15.sdk.tar.xz
+          #          tar -xf MacOSX10.15.sdk.tar.xz -C tarballs/
+          #          UNATTENDED=yes OSX_VERSION_MIN=10.10 ./build.sh
+          #
       - name: Cross-compile for Linux ARM64
         run: fyne-cross linux -arch=arm64 -app-id=com.kira.kensho
 
       - name: Cross-compile for Linux x86
         run: fyne-cross linux -arch=amd64 -app-id=com.kira.kensho
 
-      - name: Cross-compile for Darwin ARM64
-        run: |
-          export PATH=$PWD/osxcross/target/bin:$PATH
-          fyne-cross darwin -arch=arm64 -app-id=com.kira.kensho
-
-      - name: Cross-compile for Darwin x86
-        run: |
-          export PATH=$PWD/osxcross/target/bin:$PATH
-          fyne-cross darwin -arch=amd64 -app-id=com.kira.kensho
-
+          #      - name: Cross-compile for Darwin ARM64
+          #        run: |
+          #          export PATH=$PWD/osxcross/target/bin:$PATH
+          #          fyne-cross darwin -arch=arm64 -app-id=com.kira.kensho
+          #
+          #      - name: Cross-compile for Darwin x86
+          #        run: |
+          #          export PATH=$PWD/osxcross/target/bin:$PATH
+          #          fyne-cross darwin -arch=amd64 -app-id=com.kira.kensho
+          #
       - name: Cross-compile for Windows ARM64
         run: fyne-cross windows -arch=arm64 -app-id=com.kira.kensho
 
