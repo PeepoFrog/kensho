@@ -99,8 +99,9 @@ jobs:
       - name: Setup DEBIAN directory for AMD64
         run: |
           mkdir -p build-amd64/DEBIAN
+          VERSION=$(echo "${GITHUB_REF#refs/tags/}" | sed 's/^v//')
           echo "Package: kensho" > build-amd64/DEBIAN/control
-          echo "Version: v0.1.3" >> build-amd64/DEBIAN/control
+          echo "Version: $VERSION" >> build-amd64/DEBIAN/control
           echo "Section: base" >> build-amd64/DEBIAN/control
           echo "Priority: optional" >> build-amd64/DEBIAN/control
           echo "Architecture: amd64" >> build-amd64/DEBIAN/control
@@ -111,8 +112,9 @@ jobs:
       - name: Setup DEBIAN directory for ARM64
         run: |
           mkdir -p build-arm64/DEBIAN
+          VERSION=$(echo "${GITHUB_REF#refs/tags/}" | sed 's/^v//')
           echo "Package: kensho" > build-arm64/DEBIAN/control
-          echo "Version: v0.1.3" >> build-arm64/DEBIAN/control
+          echo "Version: $VERSION" >> build-arm64/DEBIAN/control
           echo "Section: base" >> build-arm64/DEBIAN/control
           echo "Priority: optional" >> build-arm64/DEBIAN/control
           echo "Architecture: arm64" >> build-arm64/DEBIAN/control
