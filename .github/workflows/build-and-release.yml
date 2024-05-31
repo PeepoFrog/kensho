@@ -93,10 +93,13 @@ jobs:
       - name: Cross-compile for Windows x86
         run: fyne-cross windows -arch=amd64 -app-id=com.kira.kensho
 
-
       - name: Install packaging tools
         run: sudo apt-get update && sudo apt-get install -y debhelper
-
+      - name: DEBUG
+        run: |
+          ls -lah
+          ls -lah fyne-cross
+          ls -lah fyne-cross/dist/
       - name: Create DEB package
         run: |
           mkdir -p build/DEBIAN
