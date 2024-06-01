@@ -30,10 +30,12 @@ func (g *Gui) ShowConnect() {
 		passwordEntry := widget.NewPasswordEntry()
 		errorLabel := widget.NewLabel("")
 		keyPathEntry := widget.NewEntry()
+		rawKeyEntry := widget.NewEntry()
 		passphraseEntry := widget.NewPasswordEntry()
 		passphraseEntry.Hide()
 		var privKeyState bool
 		var passphraseState bool
+		var rawKeyState bool
 		portEntry.PlaceHolder = "22"
 		passphraseEntry.Validator = func(s string) error {
 			if s == "" {
@@ -42,7 +44,9 @@ func (g *Gui) ShowConnect() {
 			return nil
 		}
 		addressBoxEntry := container.NewBorder(nil, nil, nil, container.NewHBox(widget.NewLabel(":"), portEntry), ipEntry)
-
+		rawKeyEntry.PlaceHolder = "private key in plain text"
+		rawKeyEntry.MultiLine = true
+		rawKeyEntry.Wrapping = fyne.TextWrapBreak
 		keyPathEntry.PlaceHolder = "path to your private key"
 		passphraseEntry.PlaceHolder = "your passphrase"
 		passphraseCheck := widget.NewCheck("SSH passphrase key", func(b bool) {
@@ -54,6 +58,20 @@ func (g *Gui) ShowConnect() {
 			}
 		})
 
+		rawKeyCheck := widget.NewCheck("Raw key", func(b bool) {})
+		rawKeyEntry.OnChanged = func(s string) {
+
+			check, err := gssh.CheckIfPassphraseNeeded([]byte(s))
+			if err != nil {
+				return
+			}
+			if check {
+				passphraseCheck.SetChecked(true)
+			} else {
+				passphraseCheck.SetChecked(false)
+			}
+			log.Println(s)
+		}
 		keyPathEntry.OnChanged = func(s string) {
 			b, err := os.ReadFile(s)
 			if err != nil {
@@ -83,16 +101,22 @@ func (g *Gui) ShowConnect() {
 		}, g.Window)
 
 		openFileDialogButton := widget.NewButtonWithIcon("", theme.FileIcon(), func() { fileDialog.Show() })
-		privKeyEntry := container.NewBorder(
+		privKeyBox := container.NewBorder(
 			widget.NewLabel("Select private key"),
 			nil, nil,
 			openFileDialogButton,
 			keyPathEntry,
 		)
 
-		privKeyBoxEntry := container.NewVBox(
-			privKeyEntry,
-			passphraseEntry,
+		rawPrivKeyBox := container.NewBorder(
+			widget.NewLabel("Enter your private key"),
+			nil, nil,
+			nil,
+			rawKeyEntry,
+		)
+
+		filePrivKeyBox := container.NewVBox(
+			privKeyBox,
 		)
 
 		passwordBoxEntry := container.NewVBox(
@@ -100,6 +124,12 @@ func (g *Gui) ShowConnect() {
 			passwordEntry,
 		)
 		keyEntryBox := container.NewStack(passwordBoxEntry)
+
+		privKeyBoxEntry := container.NewVBox(
+			filePrivKeyBox,
+			passphraseEntry,
+			container.NewHBox(passphraseCheck, rawKeyCheck),
+		)
 
 		privKeyCheck := widget.NewCheck("Join with private key", func(b bool) {
 			privKeyState = b
@@ -110,7 +140,14 @@ func (g *Gui) ShowConnect() {
 			}
 		})
 
-		privKeyBoxEntry.Objects = append(privKeyBoxEntry.Objects, passphraseCheck)
+		rawKeyCheck.OnChanged = func(b bool) {
+			rawKeyState = b
+			if b {
+				privKeyBoxEntry.Objects[0] = rawPrivKeyBox
+			} else {
+				privKeyBoxEntry.Objects[0] = filePrivKeyBox
+			}
+		}
 
 		errorLabel.Wrapping = 2
 
@@ -131,12 +168,21 @@ func (g *Gui) ShowConnect() {
 				var c *ssh.Client
 
 				g.sshClient, err = func() (*ssh.Client, error) {
-					b, err = os.ReadFile(keyPathEntry.Text)
-					if err != nil {
-						return nil, err
+					log.Println("Raw key state: ", rawKeyState)
+					if rawKeyState {
+						b = []byte(rawKeyEntry.Text)
+					} else {
+						b, err = os.ReadFile(keyPathEntry.Text)
+						if err != nil {
+							return nil, err
+						}
 					}
+					log.Printf("DEBUG: privkey: \n%v", string(b))
+
 					check, err := gssh.CheckIfPassphraseNeeded(b)
+					log.Println("Passphrase check:", check)
 					if err != nil {
+						log.Printf("Error when checking if key need a passphrase: %v", err.Error())
 						return nil, err
 					}
 					if check {
@@ -148,7 +194,7 @@ func (g *Gui) ShowConnect() {
 
 						c, err = gssh.MakeSSH_ClientWithPrivKeyAndPassphrase(address, userEntry.Text, b, []byte(passphraseEntry.Text))
 						if err != nil {
-
+							log.Printf("error when creating ssh client: %v", err.Error())
 							return nil, err
 						}
 					} else {
@@ -167,7 +213,9 @@ func (g *Gui) ShowConnect() {
 				g.sshClient, err = gssh.MakeSHH_ClientWithPassword(address, userEntry.Text, passwordEntry.Text)
 			}
 			if err != nil {
+				log.Println("ERROR submitting:", err.Error())
 				errorLabel.SetText(fmt.Sprintf("ERROR: %s", err.Error()))
+				g.showErrorDialog(err, binding.NewDataListener(func() {}))
 			} else {
 				// err = TryToRunSSHSessionForTerminal(g.sshClient)
 				// if err != nil {
@@ -206,24 +254,37 @@ func (g *Gui) ShowConnect() {
 		passwordEntry.OnSubmitted = func(s string) { submitFunc() }
 		connectButton := widget.NewButton("Connect to remote host", func() { submitFunc() })
 
-		logging := container.NewVBox(
-			widget.NewLabel("IP and Port"),
-			// ipEntry,
-			addressBoxEntry,
-			widget.NewLabel("User"),
-			userEntry,
-			keyEntryBox,
-			privKeyCheck,
-			connectButton,
-			errorLabel,
-			testButton,
+		logging := container.NewBorder(
+			container.NewVBox(
+				widget.NewLabel("IP and Port"),
+				addressBoxEntry,
+				widget.NewLabel("User"),
+				userEntry,
+				keyEntryBox,
+				privKeyCheck,
+				connectButton,
+				testButton,
+			),
+			nil, nil, nil,
+			container.NewBorder(nil, nil, nil, nil, container.NewVScroll(errorLabel)),
 		)
+		// logging := container.NewVBox(
+		// 	widget.NewLabel("IP and Port"),
+		// 	addressBoxEntry,
+		// 	widget.NewLabel("User"),
+		// 	userEntry,
+		// 	keyEntryBox,
+		// 	privKeyCheck,
+		// 	connectButton,
+		// 	container.NewBorder(nil, nil, nil, nil, container.NewVScroll(errorLabel)),
+		// 	testButton,
+		// )
 		return logging
 	}
 
 	wizard = dialogWizard.NewWizard("Create ssh connection", join())
 	wizard.Show(g.Window)
-	wizard.Resize(fyne.NewSize(350, 450))
+	wizard.Resize(fyne.NewSize(350, 540))
 }
 
 func (g *Gui) sshAliveTracker() {
