@@ -109,15 +109,11 @@ jobs:
 
       - name: Rename and transfer binaries
         run: |
-          ls -lah
-          ls -lah build-arm64
-          ls -lag build-amd64
           mkdir -p uploaded-artifacts
-          mv kensho-arm64 uploaded-artifacts/kensho-arm64
-          mv kensho-amd64 uploaded-artifacts/kensho-amd64
+          mv kensho-arm64.deb uploaded-artifacts/kensho-arm64.deb
+          mv kensho-amd64.deb uploaded-artifacts/kensho-amd64.deb
           mv fyne-cross/dist/windows-amd64/Kensho.exe.zip uploaded-artifacts/Kensho-windows-amd64.zip
           mv fyne-cross/dist/windows-arm64/Kensho.exe.zip uploaded-artifacts/Kensho-windows-arm64.zip
-          ls -lah uploaded-artifacts
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
