@@ -1,4 +1,4 @@
-package interxendpoint
+package interx
 
 type pubKey struct {
 	Type  string `json:"type"`

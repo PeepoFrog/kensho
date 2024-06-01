@@ -1,4 +1,4 @@
-package interxendpoint
+package interx
 
 import "time"
 

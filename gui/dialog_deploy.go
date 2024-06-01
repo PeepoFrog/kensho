@@ -1,17 +1,18 @@
 package gui
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	dialogWizard "github.com/KiraCore/kensho/gui/dialogs"
 	"github.com/KiraCore/kensho/helper/httph"
+	"github.com/KiraCore/kensho/types"
 )
 
 func showDeployDialog(g *Gui, doneListener binding.DataListener) {
@@ -41,19 +42,15 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener) {
 	})
 
 	doneMnemonicDataListener := binding.NewDataListener(func() {
-		err := mnemonicCheck.Set(true)
-		if err != nil {
-			g.showErrorDialog(err, binding.NewDataListener(func() {}))
-			return
-		}
-		confirmedMnemonic, err := mnemonicBinding.Get()
-		log.Println("Confirmed mnemonic:", confirmedMnemonic, err)
+		mnemonicCheck.Set(true)
+		confirmedMnemonic, _ := mnemonicBinding.Get()
+		log.Println("Confirmed mnemonic:", confirmedMnemonic)
 	})
 	mnemonicManagerDialogButton := widget.NewButtonWithIcon("Mnemonic", theme.CancelIcon(), func() {
 		showMnemonicManagerDialog(g, mnemonicBinding, doneMnemonicDataListener)
 	})
 
-	constructJoinCmd := func() (string, error) {
+	constructJoinCmd := func() (*types.RequestDeployPayload, error) {
 		rpcPort := sekaiRPCPortToJoinEntry.Text
 		if rpcPort == "" {
 			rpcPort = sekaiRPCPortToJoinEntry.PlaceHolder
@@ -61,7 +58,7 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener) {
 			validate := httph.ValidatePortRange(rpcPort)
 			if !validate {
 				sekaiP2PPortEntry.SetValidationError(fmt.Errorf("invalid port"))
-				return "", fmt.Errorf("RPC port is not valid")
+				return nil, fmt.Errorf("RPC port is not valid")
 			}
 		}
 		p2pPort := sekaiP2PPortEntry.Text
@@ -70,7 +67,7 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener) {
 		} else {
 			validate := httph.ValidatePortRange(p2pPort)
 			if !validate {
-				return "", fmt.Errorf("P2P port is not valid")
+				return nil, fmt.Errorf("P2P port is not valid")
 			}
 		}
 		interxPort := interxPortToJoinEntry.Text
@@ -79,87 +76,77 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener) {
 		} else {
 			validate := httph.ValidatePortRange(rpcPort)
 			if !validate {
-				return "", fmt.Errorf("interx port is not valid")
+				return nil, fmt.Errorf("interx port is not valid")
 			}
 		}
 
 		ip := ipToJoinEntry.Text
 		validate := httph.ValidateIP(ip)
 		if !validate {
-			return "", fmt.Errorf(`ip <%v> is not valid`, ip)
+			return nil, fmt.Errorf(`ip <%v> is not valid`, ip)
 		}
 
-		mnemonic, err := mnemonicBinding.Get()
-		if err != nil {
-			return "", err
+		mnemonic, _ := mnemonicBinding.Get()
+
+		lCheck, _ := localCheckBinding.Get()
+
+		payload := &types.RequestDeployPayload{
+			Command: "join",
+			Args: types.Args{
+				IP:         ip,
+				InterxPort: interxPort,
+				RPCPort:    rpcPort,
+				P2PPort:    p2pPort,
+				Mnemonic:   mnemonic,
+				Local:      lCheck,
+			},
 		}
 
-		lCheck, err := localCheckBinding.Get()
-		if err != nil {
-			return "", err
-		}
-		cmd := fmt.Sprintf(`curl --silent --show-error --fail -X POST http://localhost:8282/api/execute -H "Content-Type: application/json" -d '{
-			"command": "join",
-			"args": {
-				"ip": "%v",
-				"interxPort": %v,
-				"rpcPort": %v,
-				"p2pPort": %v,
-				"mnemonic": "%v",
-				"local": %v,
-				"enableInterx": %v
-			}
-		}'`, ip, interxPort, rpcPort, p2pPort, mnemonic, lCheck, true)
-		return cmd, nil
+		return payload, nil
 	}
 
 	deployErrorBinding := binding.NewBool()
 	errorMessageBinding := binding.NewString()
 
 	deployButton := widget.NewButton("Deploy", func() {
-		cmdForJoin, err := constructJoinCmd()
+		payload, err := constructJoinCmd()
 		if err != nil {
 			g.showErrorDialog(err, binding.NewDataListener(func() {}))
 			return
 		}
 
-		sP, err := sudoPasswordBinding.Get()
-		if err != nil {
-			dialog.ShowError(err, g.Window)
-			return
-		}
-		cmdForDeploy := fmt.Sprintf(`echo '%v' | sudo -S sh -c "$(curl -s --show-error --fail https://raw.githubusercontent.com/KiraCore/sekin/main/scripts/bootstrap.sh 2>&1)"`, sP)
-		// cmdForDeploy = fmt.Sprintf(`echo %v`, sP)
+		sP, _ := sudoPasswordBinding.Get()
+
+		cmdForDeploy := fmt.Sprintf(`echo '%v' | sudo -S sh -c "$(curl -s --show-error --fail %v 2>&1)"`, sP, types.BOOTSTRAP_SCRIPT)
+		// cmdForDeploy = fmt.Sprintf(`echo %v`, sP) // for quick testing
 		showCmdExecDialogAndRunCmdV4(g, "Deploying", cmdForDeploy, true, deployErrorBinding, errorMessageBinding)
 
-		errB, err := deployErrorBinding.Get()
-		if err != nil {
-			g.showErrorDialog(err, binding.NewDataListener(func() {}))
-			return
-		}
+		errB, _ := deployErrorBinding.Get()
 		if errB {
-			errMsg, err := errorMessageBinding.Get()
-			if err != nil {
-				g.showErrorDialog(err, binding.NewDataListener(func() {}))
-				return
-			}
+			errMsg, _ := errorMessageBinding.Get()
 			g.showErrorDialog(fmt.Errorf("error while checking the sudo password: %v ", errMsg), binding.NewDataListener(func() {}))
 			return
 		}
 
-		showCmdExecDialogAndRunCmdV4(g, "Joining", cmdForJoin, true, deployErrorBinding, errorMessageBinding)
+		g.WaitDialog.ShowWaitDialog()
+		jsonPayload, err := json.Marshal(payload)
+		if err != nil {
+			log.Printf("Failed to marshal JSON payload: %v", err)
+			return
+		}
+		out, err := httph.ExecHttpRequestBySSHTunnel(g.sshClient, types.SEKIN_EXECUTE_ENDPOINT, "POST", jsonPayload)
+		log.Printf("Executing http payload for join: %+v", payload)
+		log.Printf("log: %v\nerr: %v", string(out), err)
+		g.WaitDialog.HideWaitDialog()
 
-		errB, err = deployErrorBinding.Get()
 		if err != nil {
 			g.showErrorDialog(err, binding.NewDataListener(func() {}))
 			return
 		}
+
+		errB, _ = deployErrorBinding.Get()
 		if errB {
-			errMsg, err := errorMessageBinding.Get()
-			if err != nil {
-				g.showErrorDialog(err, binding.NewDataListener(func() {}))
-				return
-			}
+			errMsg, _ := errorMessageBinding.Get()
 			g.showErrorDialog(fmt.Errorf("error when executing join command: %v ", errMsg), binding.NewDataListener(func() {}))
 			return
 		}
@@ -172,11 +159,7 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener) {
 	deployButton.Disable()
 
 	deployActivatorDataListener := binding.NewDataListener(func() {
-		sCheck, err := sudoCheck.Get()
-		if err != nil {
-			g.showErrorDialog(err, binding.NewDataListener(func() {}))
-			return
-		}
+		sCheck, _ := sudoCheck.Get()
 		if sCheck {
 			sudoPasswordEntryButton.Icon = theme.ConfirmIcon()
 			sudoPasswordEntryButton.Refresh()
@@ -184,11 +167,8 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener) {
 			sudoPasswordEntryButton.Icon = theme.CancelIcon()
 			sudoPasswordEntryButton.Refresh()
 		}
-		mCheck, err := mnemonicCheck.Get()
-		if err != nil {
-			g.showErrorDialog(err, binding.NewDataListener(func() {}))
-			return
-		}
+		mCheck, _ := mnemonicCheck.Get()
+
 		if mCheck {
 			mnemonicManagerDialogButton.Icon = theme.ConfirmIcon()
 			mnemonicManagerDialogButton.Refresh()
@@ -258,10 +238,7 @@ func showSudoEnteringDialog(g *Gui, bindString binding.String, bindCheck binding
 	okButton := widget.NewButton("Ok", func() {
 		err := checkSudoPassword(sudoPasswordEntry.Text)
 		if err == nil {
-			err = bindCheck.Set(true)
-			if err != nil {
-				return
-			}
+			bindCheck.Set(true)
 			wizard.Hide()
 		} else {
 			bindCheck.Set(false)

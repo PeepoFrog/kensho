@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	interxendpointtypes "github.com/KiraCore/kensho/types/interxEndpoint"
+	interxendpoint "github.com/KiraCore/kensho/types/endpoint/interx"
 )
 
 var mu sync.Mutex
@@ -87,8 +87,8 @@ func loopFunc(ctx context.Context, wg *sync.WaitGroup, client *http.Client, pool
 
 	currentDepth++
 
-	var nodeInfo *interxendpointtypes.NetInfo
-	var status *interxendpointtypes.Status
+	var nodeInfo *interxendpoint.NetInfo
+	var status *interxendpoint.Status
 	var errNetInfo error
 	var errStatus error
 
@@ -164,7 +164,7 @@ func cleanValue(toClean map[string]string, key string) {
 
 const TimeOutDelay time.Duration = time.Second * 5
 
-func GetNetInfoFromInterx(ctx context.Context, client *http.Client, ip string) (*interxendpointtypes.NetInfo, error) {
+func GetNetInfoFromInterx(ctx context.Context, client *http.Client, ip string) (*interxendpoint.NetInfo, error) {
 
 	ctxWithTO, c := context.WithTimeout(ctx, TimeOutDelay)
 	defer c()
@@ -186,7 +186,7 @@ func GetNetInfoFromInterx(ctx context.Context, client *http.Client, ip string) (
 		return nil, err
 	}
 
-	var nodeInfo interxendpointtypes.NetInfo
+	var nodeInfo interxendpoint.NetInfo
 	err = json.Unmarshal(b, &nodeInfo)
 	if err != nil {
 		return nil, err
@@ -194,7 +194,7 @@ func GetNetInfoFromInterx(ctx context.Context, client *http.Client, ip string) (
 	return &nodeInfo, nil
 }
 
-func GetStatusFromInterx(ctx context.Context, client *http.Client, ip string) (*interxendpointtypes.Status, error) {
+func GetStatusFromInterx(ctx context.Context, client *http.Client, ip string) (*interxendpoint.Status, error) {
 	ctxWithTO, c := context.WithTimeout(ctx, TimeOutDelay)
 	defer c()
 	// log.Printf("Getting net_info from: %v", ip)
@@ -215,7 +215,7 @@ func GetStatusFromInterx(ctx context.Context, client *http.Client, ip string) (*
 		return nil, err
 	}
 
-	var nodeStatus interxendpointtypes.Status
+	var nodeStatus interxendpoint.Status
 	err = json.Unmarshal(b, &nodeStatus)
 	if err != nil {
 		return nil, err
