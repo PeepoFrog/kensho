@@ -107,21 +107,27 @@ jobs:
       - name: Build DEB package for ARM64
         run: dpkg-deb --build build-arm64 kensho-arm64.deb
 
-      - name: Rename Windows binaries
+      - name: Rename and transfer binaries
         run: |
-          mv fyne-cross/dist/windows-amd64/Kensho.exe.zip fyne-cross/dist/windows-amd64/Kensho-windows-amd64.zip
-          mv fyne-cross/dist/windows-arm64/Kensho.exe.zip fyne-cross/dist/windows-arm64/Kensho-windows-arm64.zip
-
+          ls -lah
+          ls -lah build-arm64
+          ls -lag build-amd64
+          mkdir -p uploaded-artifacts
+          mv kensho-arm64 uploaded-artifacts/kensho-arm64
+          mv kensho-amd64 uploaded-artifacts/kensho-amd64
+          mv fyne-cross/dist/windows-amd64/Kensho.exe.zip uploaded-artifacts/Kensho-windows-amd64.zip
+          mv fyne-cross/dist/windows-arm64/Kensho.exe.zip uploaded-artifacts/Kensho-windows-arm64.zip
+          ls -lah uploaded-artifacts
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: kensho-packages
           path: |
-            build-amd64/kensho-amd64.deb
-            build-arm64/kensho-arm64.deb
-            fyne-cross/dist/windows-amd64/Kensho-windows-amd64.zip
-            fyne-cross/dist/windows-arm64/Kensho-windows-arm64.zip
+            uploaded-artifacts/kensho-amd64.deb
+            uploaded-artifacts/kensho-arm64.deb
+            uploaded-artifacts/Kensho-windows-amd64.zip
+            uploaded-artifacts/Kensho-windows-arm64.zip
 
   release:
     needs: build-and-ver
