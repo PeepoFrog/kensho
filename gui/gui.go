@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -22,6 +23,8 @@ type Gui struct {
 	ConnectionStatusBinding binding.Bool
 	ConnectionCount         int
 	Terminal                Terminal
+	LogCtx                  context.Context
+	LogCtxCancel            context.CancelFunc
 }
 type Host struct {
 	IP string
@@ -107,6 +110,12 @@ func (g *Gui) makeNav(setTab func(t Tab)) fyne.CanvasObject {
 				// fmt.Println(uid)
 				a.Preferences().SetString(preferenceCurrent, uid)
 				setTab(t)
+			}
+		},
+		OnUnselected: func(uid widget.TreeNodeID) {
+			if uid == "logs" {
+				log.Println("Unselected: ", uid)
+				g.LogCtxCancel()
 			}
 		},
 	}
