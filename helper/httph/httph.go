@@ -82,6 +82,23 @@ func GetShidaiStatus(sshClient *ssh.Client, shidaiPort int) (*shidaiendpoint.Sta
 	return &data, err
 }
 
+func GetValidatorStatus(sshClient *ssh.Client, shidaiPort int) (*shidaiendpoint.Validator, error) {
+	valid := ValidatePortRange(strconv.Itoa(shidaiPort))
+	if !valid {
+		return nil, fmt.Errorf("<%v> is not valid", shidaiPort)
+	}
+	o, err := ExecHttpRequestBySSHTunnel(sshClient, fmt.Sprintf("http://localhost:%v/validator", shidaiPort), "GET", nil)
+	if err != nil {
+		return nil, err
+	}
+	var data shidaiendpoint.Validator
+	err = json.Unmarshal(o, &data)
+	if err != nil {
+		return nil, err
+	}
+	return &data, err
+}
+
 func ValidatePortRange(portStr string) bool {
 	port, err := strconv.Atoi(portStr)
 	if err != nil {

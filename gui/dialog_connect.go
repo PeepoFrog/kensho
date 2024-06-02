@@ -177,7 +177,6 @@ func (g *Gui) ShowConnect() {
 							return nil, err
 						}
 					}
-					log.Printf("DEBUG: privkey: \n%v", string(b))
 
 					check, err := gssh.CheckIfPassphraseNeeded(b)
 					log.Println("Passphrase check:", check)
