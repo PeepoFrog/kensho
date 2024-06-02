@@ -46,7 +46,7 @@ func (w *WaitDialog) HideWaitDialog() {
 
 func (g *Gui) showErrorDialog(err error, closeListener binding.DataListener) {
 	var wizard *dialogWizard.Wizard
-
+	log.Println("Enabling error dialog with err:", err.Error())
 	errorLabel := widget.NewLabel(err.Error())
 	errorLabel.Wrapping = fyne.TextWrapWord
 

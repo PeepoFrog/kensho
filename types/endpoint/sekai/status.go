@@ -1,4 +1,4 @@
-package sekaiendpoint
+package sekai
 
 type protocolVersion struct {
 	P2P   string `json:"p2p"`
