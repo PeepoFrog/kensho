@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -21,13 +23,13 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener) {
 	ipToJoinEntry := widget.NewEntry()
 
 	interxPortToJoinEntry := widget.NewEntry()
-	interxPortToJoinEntry.SetPlaceHolder("11000")
+	interxPortToJoinEntry.SetPlaceHolder(fmt.Sprintf("%v", types.DEFAULT_INTERX_PORT))
 
 	sekaiRPCPortToJoinEntry := widget.NewEntry()
-	sekaiRPCPortToJoinEntry.SetPlaceHolder("26657")
+	sekaiRPCPortToJoinEntry.SetPlaceHolder(fmt.Sprintf("%v", types.DEFAULT_RPC_PORT))
 
 	sekaiP2PPortEntry := widget.NewEntry()
-	sekaiP2PPortEntry.SetPlaceHolder("26656")
+	sekaiP2PPortEntry.SetPlaceHolder(fmt.Sprintf("%v", types.DEFAULT_P2P_PORT))
 
 	localCheckBinding := binding.NewBool()
 	localCheck := widget.NewCheckWithData("local", localCheckBinding)
@@ -51,30 +53,46 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener) {
 	})
 
 	constructJoinCmd := func() (*types.RequestDeployPayload, error) {
-		rpcPort := sekaiRPCPortToJoinEntry.Text
-		if rpcPort == "" {
-			rpcPort = sekaiRPCPortToJoinEntry.PlaceHolder
+		var err error
+		var rpcPort int
+
+		if sekaiRPCPortToJoinEntry.Text == "" {
+			rpcPort = types.DEFAULT_RPC_PORT
 		} else {
-			validate := httph.ValidatePortRange(rpcPort)
+			rpcPort, err = strconv.Atoi(sekaiRPCPortToJoinEntry.PlaceHolder)
+			if err != nil {
+				return nil, fmt.Errorf("RPC port is not valid, cannot convert string to int")
+			}
+			validate := httph.ValidatePortRange(strconv.Itoa(rpcPort))
 			if !validate {
 				sekaiP2PPortEntry.SetValidationError(fmt.Errorf("invalid port"))
 				return nil, fmt.Errorf("RPC port is not valid")
 			}
 		}
-		p2pPort := sekaiP2PPortEntry.Text
-		if p2pPort == "" {
-			p2pPort = sekaiP2PPortEntry.PlaceHolder
+
+		var p2pPort int
+		if sekaiP2PPortEntry.PlaceHolder == "" {
+			p2pPort = types.DEFAULT_P2P_PORT
 		} else {
-			validate := httph.ValidatePortRange(p2pPort)
+			p2pPort, err = strconv.Atoi(sekaiP2PPortEntry.PlaceHolder)
+			if err != nil {
+				return nil, fmt.Errorf("P2P port is not valid, cannot convert string to int")
+			}
+			validate := httph.ValidatePortRange(strconv.Itoa(p2pPort))
 			if !validate {
 				return nil, fmt.Errorf("P2P port is not valid")
 			}
 		}
-		interxPort := interxPortToJoinEntry.Text
-		if interxPort == "" {
-			interxPort = interxPortToJoinEntry.PlaceHolder
+
+		var interxPort int
+		if interxPortToJoinEntry.Text == "" {
+			interxPort = types.DEFAULT_INTERX_PORT
 		} else {
-			validate := httph.ValidatePortRange(rpcPort)
+			interxPort, err = strconv.Atoi(interxPortToJoinEntry.PlaceHolder)
+			if err != nil {
+				return nil, fmt.Errorf("INTERX port is not valid, cannot convert string to int")
+			}
+			validate := httph.ValidatePortRange(strconv.Itoa(interxPort))
 			if !validate {
 				return nil, fmt.Errorf("interx port is not valid")
 			}
@@ -129,25 +147,21 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener) {
 		}
 
 		g.WaitDialog.ShowWaitDialog()
+		time.Sleep(time.Second * 3)
 		jsonPayload, err := json.Marshal(payload)
 		if err != nil {
 			log.Printf("Failed to marshal JSON payload: %v", err)
 			return
 		}
-		out, err := httph.ExecHttpRequestBySSHTunnel(g.sshClient, types.SEKIN_EXECUTE_ENDPOINT, "POST", jsonPayload)
+
 		log.Printf("Executing http payload for join: %+v", payload)
-		log.Printf("log: %v\nerr: %v", string(out), err)
+		out, err := httph.ExecHttpRequestBySSHTunnel(g.sshClient, types.SEKIN_EXECUTE_ENDPOINT, "POST", jsonPayload)
+		log.Printf("ERROR:\n %v\nerr: %v", string(out), err)
 		g.WaitDialog.HideWaitDialog()
 
 		if err != nil {
+			log.Println("Showing error====")
 			g.showErrorDialog(err, binding.NewDataListener(func() {}))
-			return
-		}
-
-		errB, _ = deployErrorBinding.Get()
-		if errB {
-			errMsg, _ := errorMessageBinding.Get()
-			g.showErrorDialog(fmt.Errorf("error when executing join command: %v ", errMsg), binding.NewDataListener(func() {}))
 			return
 		}
 

@@ -20,9 +20,9 @@ type RequestDeployPayload struct {
 // Args represents the arguments in the JSON payload.
 type Args struct {
 	IP         string `json:"ip"`
-	InterxPort string `json:"interx_port"`
-	RPCPort    string `json:"rpc_port"`
-	P2PPort    string `json:"p2p_port"`
+	InterxPort int    `json:"interx_port"`
+	RPCPort    int    `json:"rpc_port"`
+	P2PPort    int    `json:"p2p_port"`
 	Mnemonic   string `json:"mnemonic"`
 	Local      bool   `json:"local"`
 }
