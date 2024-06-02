@@ -24,10 +24,10 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 
 	shidaiStatusBinding := binding.NewUntyped()
 
-	getShidaiStatus := func() shidai.Status {
-		status, _ := shidaiStatusBinding.Get()
-		return status.(shidai.Status)
-	}
+	// getShidaiStatus := func() shidai.Status {
+	// 	status, _ := shidaiStatusBinding.Get()
+	// 	return status.(shidai.Status)
+	// }
 
 	setShidaiStatus := func(status shidai.Status) {
 		shidaiStatusBinding.Set(status)
@@ -80,8 +80,6 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 
 		} else {
 			setShidaiStatus(*shidaiStatus)
-			log.Printf("%+v", getShidaiStatus())
-
 			shidaiStatusInfo.SetText(STATUS_Running)
 			shidaiInfraCheck.Set(shidaiStatus.Shidai.Infra)
 			sekaiInfraCheck.Set(shidaiStatus.Sekai.Infra)
@@ -124,6 +122,8 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 	})
 
 	dataListenerForSuccesses = binding.NewDataListener(func() {
+		log.Println("triggering dataListenerForSuccesses")
+
 		deployButton.Disable()
 		refresh()
 	})

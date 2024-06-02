@@ -100,7 +100,11 @@ func ValidateIP(input string) bool {
 
 func ExecHttpRequestBySSHTunnel(sshClient *ssh.Client, address, method string, payload []byte) ([]byte, error) {
 	dialer := func(network, addr string) (net.Conn, error) {
-		return sshClient.Dial(network, addr)
+		conn, err := sshClient.Dial(network, addr)
+		if err != nil {
+			log.Printf("Failed to establish SSH tunnel: %v", err)
+		}
+		return conn, err
 	}
 
 	httpTransport := &http.Transport{
@@ -130,6 +134,8 @@ func ExecHttpRequestBySSHTunnel(sshClient *ssh.Client, address, method string, p
 		log.Printf("Failed to send HTTP request: %v", err)
 		return nil, err
 	}
+
+	defer resp.Body.Close()
 
 	out, err := io.ReadAll(resp.Body)
 	if err != nil {
