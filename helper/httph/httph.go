@@ -65,21 +65,21 @@ func GetSekaiStatus(nodeIP, port string) (*sekaiendpoint.Status, error) {
 	return info, nil
 }
 
-func GetShidaiStatus(sshClient *ssh.Client, shidaiPort int) (*shidaiendpoint.Status, error) {
+func GetShidaiStatus(sshClient *ssh.Client, shidaiPort int) (shidaiendpoint.Status, error) {
 	valid := ValidatePortRange(strconv.Itoa(shidaiPort))
 	if !valid {
-		return nil, fmt.Errorf("<%v> is not valid", shidaiPort)
+		return shidaiendpoint.Status{}, fmt.Errorf("<%v> is not valid", shidaiPort)
 	}
 	o, err := ExecHttpRequestBySSHTunnel(sshClient, fmt.Sprintf("http://localhost:%v/status", shidaiPort), "GET", nil)
 	if err != nil {
-		return nil, err
+		return shidaiendpoint.Status{}, err
 	}
 	var data shidaiendpoint.Status
 	err = json.Unmarshal(o, &data)
 	if err != nil {
-		return nil, err
+		return shidaiendpoint.Status{}, err
 	}
-	return &data, err
+	return data, err
 }
 
 func GetValidatorStatus(sshClient *ssh.Client, shidaiPort int) (*shidaiendpoint.Validator, error) {
