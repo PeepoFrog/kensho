@@ -121,7 +121,7 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 			deployButton.Enable()
 		}
 
-		g.WaitDialog.HideWaitDialog()
+		defer g.WaitDialog.HideWaitDialog()
 	}
 
 	refreshButton := widget.NewButton("Refresh", func() {
@@ -134,7 +134,7 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 		deployButton.Disable()
 		refresh()
 	})
-
+	defer refresh()
 	return container.NewBorder(nil, refreshButton, nil, nil,
 		container.NewVBox(
 			deployButton,
