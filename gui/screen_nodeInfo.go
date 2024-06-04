@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"encoding/json"
 	"log"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/atotto/clipboard"
 
 	"github.com/KiraCore/kensho/helper/httph"
+	"github.com/KiraCore/kensho/types"
 	"github.com/KiraCore/kensho/types/endpoint/shidai"
 )
 
@@ -24,93 +26,6 @@ func makeNodeInfoScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 	return makeNodeInfoTab(g)
 }
 
-// func makeValidatorInfoTab(g *Gui) fyne.CanvasObject {
-// 	validatorStatusCheck := binding.NewBool()
-// 	claimSeatStatusCheck := binding.NewBool()
-// 	validatorStateCheck := binding.NewString()
-
-// 	updateBinding := binding.NewDataListener(func() {})
-// 	validatorControlButton := widget.NewButton("", func() {
-
-// 	})
-// 	validatorControlButton.Disable()
-// 	validatorControlButton.Hide()
-// 	refreshFunc := func() {
-// 		g.WaitDialog.ShowWaitDialog()
-// 		status, err := httph.GetValidatorStatus(g.sshClient, types.DEFAULT_SHIDAI_PORT)
-// 		if err != nil {
-// 			g.showErrorDialog(err, binding.NewDataListener(func() {}))
-// 			log.Println(err.Error())
-// 			return
-// 		}
-
-// 		validatorStatusCheck.Set(status.Validator)
-// 		claimSeatStatusCheck.Set(status.ClaimSeat)
-// 		updateBinding.DataChanged()
-// 		g.WaitDialog.HideWaitDialog()
-// 	}
-
-// 	refreshBinding := binding.NewDataListener(refreshFunc)
-
-// 	pauseValidatorFunc := func() {
-// 		// pause
-// 		refreshBinding.DataChanged()
-// 	}
-// 	unpauseValidatorFunc := func() {
-// 		// unpause tx
-// 		refreshBinding.DataChanged()
-// 	}
-// 	activateValidatorFunc := func() {
-// 		// activate
-// 		refreshBinding.DataChanged()
-// 	}
-
-// 	updateBinding = binding.NewDataListener(func() {
-// 		valCheck, _ := validatorStatusCheck.Get()
-// 		claimCheck, _ := claimSeatStatusCheck.Get()
-
-// 		if claimCheck {
-// 			if validatorControlButton.Disabled() {
-// 				validatorControlButton.Enable()
-// 				validatorControlButton.Show()
-// 				validatorControlButton.SetText("Claim validator seat")
-// 			}
-// 		}
-
-// 		if valCheck {
-// 			status, _ := validatorStateCheck.Get()
-// 			switch status {
-// 			case string(shidai.Active):
-// 				if validatorControlButton.Disabled() {
-// 					validatorControlButton.Enable()
-// 					validatorControlButton.Show()
-// 					validatorControlButton.SetText("Pause")
-// 					validatorControlButton.OnTapped = pauseValidatorFunc
-// 				}
-// 			case string(shidai.Paused):
-// 				if validatorControlButton.Disabled() {
-// 					validatorControlButton.Enable()
-// 					validatorControlButton.Show()
-// 					validatorControlButton.SetText("Activate")
-// 					validatorControlButton.OnTapped = unpauseValidatorFunc
-// 				}
-// 			case string(shidai.Inactive):
-// 				if validatorControlButton.Disabled() {
-// 					validatorControlButton.Enable()
-// 					validatorControlButton.Show()
-// 					validatorControlButton.SetText("Activate")
-// 					validatorControlButton.OnTapped = activateValidatorFunc
-// 				}
-// 			}
-// 		}
-// 	})
-
-// 	refreshButton := widget.NewButton("Refresh", func() { refreshBinding.DataChanged() })
-// 	container.NewHBox()
-
-// 	return container.NewBorder(nil, refreshButton, nil, nil)
-// }
-
 func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	// TODO: only for testing, delete later
 	// g.Host.IP = "148.251.69.56"
@@ -120,14 +35,7 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	validatorControlButton := widget.NewButton("", func() {})
 
 	claimSeatButton := widget.NewButton("Claim validator seat", func() {})
-	claimSeatButton.OnTapped = func() {
-		defer refreshBinding.DataChanged()
-		//claim seat func
 
-		// if err ==nil
-		// claimSeatButton.Hide()
-
-	}
 	claimSeatButton.Hide()
 
 	latestBlockData := binding.NewString()
@@ -198,17 +106,35 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	validatorControlButton.Disable()
 	validatorControlButton.Hide()
 
+	execFunc := func(arg types.Cmd) {
+		g.WaitDialog.ShowWaitDialog()
+		payload, err := json.Marshal(types.ExecSekaiCmd{TX: arg})
+		log.Printf("Executing: %v", arg)
+		if err != nil {
+			g.showErrorDialog(err, binding.NewDataListener(func() {}))
+		}
+		httph.ExecHttpRequestBySSHTunnel(g.sshClient, types.SEKIN_EXECUTE_CMD_ENDPOINT, "POST", payload)
+		g.WaitDialog.HideWaitDialog()
+
+		refreshBinding.DataChanged()
+	}
+
+	claimSeatButton.OnTapped = func() {
+		//claim seat
+		execFunc(types.ClaimValidatorSeat)
+	}
 	pauseValidatorFunc := func() {
 		// pause
-		refreshBinding.DataChanged()
+		execFunc(types.Pause)
 	}
 	unpauseValidatorFunc := func() {
 		// unpause tx
-		refreshBinding.DataChanged()
+		execFunc(types.Unpause)
 	}
 	activateValidatorFunc := func() {
 		// activate
-		refreshBinding.DataChanged()
+		execFunc(types.Activate)
+
 	}
 
 	errBinding := binding.NewUntyped()
@@ -264,11 +190,13 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		validatorStatusData.Set(dashboardData.ValidatorStatus)
 	}
 	refreshBinding = binding.NewDataListener(func() {
+		g.WaitDialog.ShowWaitDialog()
 		refreshScreen()
+		g.WaitDialog.HideWaitDialog()
 		err, _ := errBinding.Get()
 		if err != nil {
-			if err.(error) != nil {
-				g.showErrorDialog(err.(error), binding.NewDataListener(func() {}))
+			if e, ok := err.(error); ok {
+				g.showErrorDialog(e, binding.NewDataListener(func() {}))
 			}
 		}
 	})
