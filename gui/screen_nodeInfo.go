@@ -12,7 +12,6 @@ import (
 	"github.com/atotto/clipboard"
 
 	"github.com/KiraCore/kensho/helper/httph"
-	"github.com/KiraCore/kensho/types"
 	"github.com/KiraCore/kensho/types/endpoint/shidai"
 )
 
@@ -25,92 +24,92 @@ func makeNodeInfoScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 	return makeNodeInfoTab(g)
 }
 
-func makeValidatorInfoTab(g *Gui) fyne.CanvasObject {
-	validatorStatusCheck := binding.NewBool()
-	claimSeatStatusCheck := binding.NewBool()
-	validatorStateCheck := binding.NewString()
+// func makeValidatorInfoTab(g *Gui) fyne.CanvasObject {
+// 	validatorStatusCheck := binding.NewBool()
+// 	claimSeatStatusCheck := binding.NewBool()
+// 	validatorStateCheck := binding.NewString()
 
-	updateBinding := binding.NewDataListener(func() {})
-	validatorControlButton := widget.NewButton("", func() {
+// 	updateBinding := binding.NewDataListener(func() {})
+// 	validatorControlButton := widget.NewButton("", func() {
 
-	})
-	validatorControlButton.Disable()
-	validatorControlButton.Hide()
-	refreshFunc := func() {
-		g.WaitDialog.ShowWaitDialog()
-		status, err := httph.GetValidatorStatus(g.sshClient, types.DEFAULT_SHIDAI_PORT)
-		if err != nil {
-			g.showErrorDialog(err, binding.NewDataListener(func() {}))
-			log.Println(err.Error())
-			return
-		}
+// 	})
+// 	validatorControlButton.Disable()
+// 	validatorControlButton.Hide()
+// 	refreshFunc := func() {
+// 		g.WaitDialog.ShowWaitDialog()
+// 		status, err := httph.GetValidatorStatus(g.sshClient, types.DEFAULT_SHIDAI_PORT)
+// 		if err != nil {
+// 			g.showErrorDialog(err, binding.NewDataListener(func() {}))
+// 			log.Println(err.Error())
+// 			return
+// 		}
 
-		validatorStatusCheck.Set(status.Validator)
-		claimSeatStatusCheck.Set(status.ClaimSeat)
-		updateBinding.DataChanged()
-		g.WaitDialog.HideWaitDialog()
-	}
+// 		validatorStatusCheck.Set(status.Validator)
+// 		claimSeatStatusCheck.Set(status.ClaimSeat)
+// 		updateBinding.DataChanged()
+// 		g.WaitDialog.HideWaitDialog()
+// 	}
 
-	refreshBinding := binding.NewDataListener(refreshFunc)
+// 	refreshBinding := binding.NewDataListener(refreshFunc)
 
-	pauseValidatorFunc := func() {
-		// pause
-		refreshBinding.DataChanged()
-	}
-	unpauseValidatorFunc := func() {
-		// unpause tx
-		refreshBinding.DataChanged()
-	}
-	activateValidatorFunc := func() {
-		// activate
-		refreshBinding.DataChanged()
-	}
+// 	pauseValidatorFunc := func() {
+// 		// pause
+// 		refreshBinding.DataChanged()
+// 	}
+// 	unpauseValidatorFunc := func() {
+// 		// unpause tx
+// 		refreshBinding.DataChanged()
+// 	}
+// 	activateValidatorFunc := func() {
+// 		// activate
+// 		refreshBinding.DataChanged()
+// 	}
 
-	updateBinding = binding.NewDataListener(func() {
-		valCheck, _ := validatorStatusCheck.Get()
-		claimCheck, _ := claimSeatStatusCheck.Get()
+// 	updateBinding = binding.NewDataListener(func() {
+// 		valCheck, _ := validatorStatusCheck.Get()
+// 		claimCheck, _ := claimSeatStatusCheck.Get()
 
-		if claimCheck {
-			if validatorControlButton.Disabled() {
-				validatorControlButton.Enable()
-				validatorControlButton.Show()
-				validatorControlButton.SetText("Claim validator seat")
-			}
-		}
+// 		if claimCheck {
+// 			if validatorControlButton.Disabled() {
+// 				validatorControlButton.Enable()
+// 				validatorControlButton.Show()
+// 				validatorControlButton.SetText("Claim validator seat")
+// 			}
+// 		}
 
-		if valCheck {
-			status, _ := validatorStateCheck.Get()
-			switch status {
-			case string(shidai.Active):
-				if validatorControlButton.Disabled() {
-					validatorControlButton.Enable()
-					validatorControlButton.Show()
-					validatorControlButton.SetText("Pause")
-					validatorControlButton.OnTapped = pauseValidatorFunc
-				}
-			case string(shidai.Paused):
-				if validatorControlButton.Disabled() {
-					validatorControlButton.Enable()
-					validatorControlButton.Show()
-					validatorControlButton.SetText("Activate")
-					validatorControlButton.OnTapped = unpauseValidatorFunc
-				}
-			case string(shidai.Inactive):
-				if validatorControlButton.Disabled() {
-					validatorControlButton.Enable()
-					validatorControlButton.Show()
-					validatorControlButton.SetText("Activate")
-					validatorControlButton.OnTapped = activateValidatorFunc
-				}
-			}
-		}
-	})
+// 		if valCheck {
+// 			status, _ := validatorStateCheck.Get()
+// 			switch status {
+// 			case string(shidai.Active):
+// 				if validatorControlButton.Disabled() {
+// 					validatorControlButton.Enable()
+// 					validatorControlButton.Show()
+// 					validatorControlButton.SetText("Pause")
+// 					validatorControlButton.OnTapped = pauseValidatorFunc
+// 				}
+// 			case string(shidai.Paused):
+// 				if validatorControlButton.Disabled() {
+// 					validatorControlButton.Enable()
+// 					validatorControlButton.Show()
+// 					validatorControlButton.SetText("Activate")
+// 					validatorControlButton.OnTapped = unpauseValidatorFunc
+// 				}
+// 			case string(shidai.Inactive):
+// 				if validatorControlButton.Disabled() {
+// 					validatorControlButton.Enable()
+// 					validatorControlButton.Show()
+// 					validatorControlButton.SetText("Activate")
+// 					validatorControlButton.OnTapped = activateValidatorFunc
+// 				}
+// 			}
+// 		}
+// 	})
 
-	refreshButton := widget.NewButton("Refresh", func() { refreshBinding.DataChanged() })
-	container.NewHBox()
+// 	refreshButton := widget.NewButton("Refresh", func() { refreshBinding.DataChanged() })
+// 	container.NewHBox()
 
-	return container.NewBorder(nil, refreshButton, nil, nil)
-}
+// 	return container.NewBorder(nil, refreshButton, nil, nil)
+// }
 
 func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	// TODO: only for testing, delete later
@@ -190,8 +189,8 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		widget.NewLabel("Miss Chance: "), missChanceLabel,
 	)
 
-	lastProducedBlock := binding.NewString()
-	lastProducedLabel := widget.NewLabelWithData(lastProducedBlock)
+	lastProducedBlockData := binding.NewString()
+	lastProducedLabel := widget.NewLabelWithData(lastProducedBlockData)
 	lastProducedBox := container.NewHBox(
 		widget.NewLabel("Last produced block: "), lastProducedLabel,
 	)
@@ -212,18 +211,15 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		refreshBinding.DataChanged()
 	}
 
+	errBinding := binding.NewUntyped()
 	refreshScreen := func() {
 		g.WaitDialog.ShowWaitDialog()
 		defer g.WaitDialog.HideWaitDialog()
 		dashboardData, err := httph.GetDashboardInfo(g.sshClient, 8282)
 		if err != nil {
-			g.showErrorDialog(err, binding.NewDataListener(func() {}))
+			errBinding.Set(err)
+			return
 		}
-
-		nodeIDData.Set(dashboardData.NodeID)
-		topData.Set(dashboardData.Top)
-		validatorAddressData.Set(dashboardData.ValidatorAddress)
-		missChanceData.Set(dashboardData.Mischance)
 
 		claimSeat = dashboardData.SeatClaimAvailable
 		if claimSeat {
@@ -258,11 +254,22 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 				}
 			}
 		}
-
+		nodeIDData.Set(dashboardData.NodeID)
+		topData.Set(dashboardData.Top)
+		validatorAddressData.Set(dashboardData.ValidatorAddress)
+		missChanceData.Set(dashboardData.Mischance)
+		latestBlockData.Set(dashboardData.Blocks)
+		lastProducedBlockData.Set(dashboardData.LastProducedBlock)
 	}
-	refreshBinding = binding.NewDataListener(func() { refreshScreen() })
+	refreshBinding = binding.NewDataListener(func() {
+		refreshScreen()
+		err, _ := errBinding.Get()
+		if err.(error) != nil {
+			g.showErrorDialog(err.(error), binding.NewDataListener(func() {}))
+		}
+	})
 
-	refreshButton := widget.NewButton("Refresh", refreshScreen)
+	refreshButton := widget.NewButton("Refresh", refreshBinding.DataChanged)
 	sendSekaiCommandButton := widget.NewButton("Execute sekai command", func() { showSekaiExecuteDialog(g) })
 	mainInfo := container.NewVScroll(
 		container.NewVBox(
