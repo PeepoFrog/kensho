@@ -221,6 +221,7 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 			return
 		}
 
+		log.Printf("dashboard %+v", dashboardData)
 		claimSeat = dashboardData.SeatClaimAvailable
 		if claimSeat {
 			claimSeatButton.Show()
@@ -260,12 +261,15 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		missChanceData.Set(dashboardData.Mischance)
 		latestBlockData.Set(dashboardData.Blocks)
 		lastProducedBlockData.Set(dashboardData.LastProducedBlock)
+		validatorStatusData.Set(dashboardData.ValidatorStatus)
 	}
 	refreshBinding = binding.NewDataListener(func() {
 		refreshScreen()
 		err, _ := errBinding.Get()
-		if err.(error) != nil {
-			g.showErrorDialog(err.(error), binding.NewDataListener(func() {}))
+		if err != nil {
+			if err.(error) != nil {
+				g.showErrorDialog(err.(error), binding.NewDataListener(func() {}))
+			}
 		}
 	})
 
