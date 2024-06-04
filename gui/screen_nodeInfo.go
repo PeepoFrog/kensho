@@ -2,6 +2,7 @@ package gui
 
 import (
 	"log"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -17,9 +18,11 @@ import (
 
 func makeNodeInfoScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 
-	nodeInfoTab := container.NewTabItem("Node Info", makeNodeInfoTab(g))
-	validatorInfoTab := container.NewTabItem("Validator Info", makeValidatorInfoTab(g))
-	return container.NewAppTabs(nodeInfoTab, validatorInfoTab)
+	// nodeInfoTab := container.NewTabItem("Node Info", makeNodeInfoTab(g))
+	// validatorInfoTab := container.NewTabItem("Validator Info", makeValidatorInfoTab(g))
+	// return container.NewAppTabs(nodeInfoTab, validatorInfoTab)
+
+	return makeNodeInfoTab(g)
 }
 
 func makeValidatorInfoTab(g *Gui) fyne.CanvasObject {
@@ -27,10 +30,10 @@ func makeValidatorInfoTab(g *Gui) fyne.CanvasObject {
 	claimSeatStatusCheck := binding.NewBool()
 	validatorStateCheck := binding.NewString()
 
+	updateBinding := binding.NewDataListener(func() {})
 	validatorControlButton := widget.NewButton("", func() {
 
 	})
-	updateBinding := binding.NewDataListener(func() {})
 	validatorControlButton.Disable()
 	validatorControlButton.Hide()
 	refreshFunc := func() {
@@ -81,6 +84,7 @@ func makeValidatorInfoTab(g *Gui) fyne.CanvasObject {
 			case string(shidai.Active):
 				if validatorControlButton.Disabled() {
 					validatorControlButton.Enable()
+					validatorControlButton.Show()
 					validatorControlButton.SetText("Pause")
 					validatorControlButton.OnTapped = pauseValidatorFunc
 				}
@@ -111,12 +115,26 @@ func makeValidatorInfoTab(g *Gui) fyne.CanvasObject {
 func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	// TODO: only for testing, delete later
 	// g.Host.IP = "148.251.69.56"
-
+	var claimSeat bool
 	// latest block box
+	var refreshBinding binding.DataListener
+	validatorControlButton := widget.NewButton("", func() {})
+
+	claimSeatButton := widget.NewButton("Claim validator seat", func() {})
+	claimSeatButton.OnTapped = func() {
+		defer refreshBinding.DataChanged()
+		//claim seat func
+
+		// if err ==nil
+		// claimSeatButton.Hide()
+
+	}
+	claimSeatButton.Hide()
+
 	latestBlockData := binding.NewString()
 	latestBlockLabel := widget.NewLabelWithData(latestBlockData)
 	latestBlockBox := container.NewHBox(
-		widget.NewLabel("Latest Block"), latestBlockLabel,
+		widget.NewLabel("Latest Block:"), latestBlockLabel,
 	)
 
 	// validator address box
@@ -137,12 +155,33 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 			}
 		}),
 	)
-	// public ip box
-	publicIpData := binding.NewString()
-	publicIpLabel := widget.NewLabelWithData(publicIpData)
-	publicIpBox := container.NewHBox(
-		widget.NewLabel("Public IP Address: "), publicIpLabel,
+
+	//validator status (active, paused, etc...)
+	validatorStatusData := binding.NewString()
+	validatorStatusLabel := widget.NewLabelWithData(validatorStatusData)
+	validatorStatusBox := container.NewHBox(
+		widget.NewLabel("Validator Status: "), validatorStatusLabel,
+		validatorControlButton,
 	)
+	// nodeID
+	nodeIDData := binding.NewString()
+	nodeIDLabel := widget.NewLabelWithData(nodeIDData)
+	nodeIDBox := container.NewHBox(
+		widget.NewLabel("Node ID:"), nodeIDLabel,
+	)
+
+	topData := binding.NewString()
+	topLabel := widget.NewLabelWithData(topData)
+	topBox := container.NewHBox(
+		widget.NewLabel("Top:"), topLabel,
+	)
+
+	// public ip box
+	// publicIpData := binding.NewString()
+	// publicIpLabel := widget.NewLabelWithData(publicIpData)
+	// publicIpBox := container.NewHBox(
+	// 	widget.NewLabel("Public IP Address: "), publicIpLabel,
+	// )
 
 	// miss chance box
 	missChanceData := binding.NewString()
@@ -151,24 +190,89 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		widget.NewLabel("Miss Chance: "), missChanceLabel,
 	)
 
+	lastProducedBlock := binding.NewString()
+	lastProducedLabel := widget.NewLabelWithData(lastProducedBlock)
+	lastProducedBox := container.NewHBox(
+		widget.NewLabel("Last produced block: "), lastProducedLabel,
+	)
+
+	validatorControlButton.Disable()
+	validatorControlButton.Hide()
+
+	pauseValidatorFunc := func() {
+		// pause
+		refreshBinding.DataChanged()
+	}
+	unpauseValidatorFunc := func() {
+		// unpause tx
+		refreshBinding.DataChanged()
+	}
+	activateValidatorFunc := func() {
+		// activate
+		refreshBinding.DataChanged()
+	}
+
 	refreshScreen := func() {
 		g.WaitDialog.ShowWaitDialog()
 		defer g.WaitDialog.HideWaitDialog()
-		i, err := httph.GetInterxStatus(g.Host.IP)
+		dashboardData, err := httph.GetDashboardInfo(g.sshClient, 8282)
 		if err != nil {
-			return
+			g.showErrorDialog(err, binding.NewDataListener(func() {}))
 		}
-		latestBlockData.Set(i.InterxInfo.LatestBlockHeight)
+
+		nodeIDData.Set(dashboardData.NodeID)
+		topData.Set(dashboardData.Top)
+		validatorAddressData.Set(dashboardData.ValidatorAddress)
+		missChanceData.Set(dashboardData.Mischance)
+
+		claimSeat = dashboardData.SeatClaimAvailable
+		if claimSeat {
+			claimSeatButton.Show()
+		} else {
+			claimSeatButton.Hide()
+		}
+
+		if dashboardData.ValidatorStatus != "Unknown" {
+			status := strings.ToUpper(dashboardData.ValidatorStatus)
+			switch status {
+			case string(shidai.Active):
+				if validatorControlButton.Disabled() {
+					validatorControlButton.Enable()
+					validatorControlButton.Show()
+					validatorControlButton.SetText("Pause")
+					validatorControlButton.OnTapped = pauseValidatorFunc
+				}
+			case string(shidai.Paused):
+				if validatorControlButton.Disabled() {
+					validatorControlButton.Enable()
+					validatorControlButton.Show()
+					validatorControlButton.SetText("Unpause")
+					validatorControlButton.OnTapped = unpauseValidatorFunc
+				}
+			case string(shidai.Inactive):
+				if validatorControlButton.Disabled() {
+					validatorControlButton.Enable()
+					validatorControlButton.Show()
+					validatorControlButton.SetText("Activate")
+					validatorControlButton.OnTapped = activateValidatorFunc
+				}
+			}
+		}
 
 	}
+	refreshBinding = binding.NewDataListener(func() { refreshScreen() })
 
 	refreshButton := widget.NewButton("Refresh", refreshScreen)
 	sendSekaiCommandButton := widget.NewButton("Execute sekai command", func() { showSekaiExecuteDialog(g) })
 	mainInfo := container.NewVScroll(
 		container.NewVBox(
-			latestBlockBox,
+			// publicIpBox,
 			validatorAddressBox,
-			publicIpBox,
+			validatorStatusBox,
+			nodeIDBox,
+			topBox,
+			latestBlockBox,
+			lastProducedBox,
 			missChanceBox,
 		),
 	)

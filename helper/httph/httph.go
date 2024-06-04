@@ -116,6 +116,7 @@ func ValidateIP(input string) bool {
 }
 
 func ExecHttpRequestBySSHTunnel(sshClient *ssh.Client, address, method string, payload []byte) ([]byte, error) {
+	log.Printf("requesting <%v>\nPayload: %+v", address, payload)
 	dialer := func(network, addr string) (net.Conn, error) {
 		conn, err := sshClient.Dial(network, addr)
 		if err != nil {
@@ -160,4 +161,66 @@ func ExecHttpRequestBySSHTunnel(sshClient *ssh.Client, address, method string, p
 	}
 
 	return out, nil
+}
+
+func CreateTunnelForSSEConnection(sshClient *ssh.Client, address string) (*http.Response, error) {
+	dialer := func(network, addr string) (net.Conn, error) {
+		return sshClient.Dial(network, addr)
+	}
+
+	httpTransport := &http.Transport{
+		Dial: dialer,
+	}
+
+	httpClient := &http.Client{
+		Transport: httpTransport,
+	}
+
+	req, err := http.NewRequest("GET", address, nil)
+	if err != nil {
+		log.Printf("Failed to create HTTP request: %v", err)
+		return nil, err
+	}
+	req.Header.Set("Accept", "text/event-stream")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		log.Printf("Failed to send HTTP request: %v", err)
+		return nil, err
+
+	}
+
+	return resp, nil
+}
+
+// TODO:
+type Dashboard struct {
+	Date                string `json:"date"`
+	ValidatorStatus     string `json:"val_status"`
+	Blocks              string `json:"blocks"`
+	Top                 string `json:"top"`
+	Streak              string `json:"streak"`
+	Mischance           string `json:"mischance"`
+	MischanceConfidence string `json:"mischance_confidence"`
+	StartHeight         string `json:"start_height"`
+	LastProducedBlock   string `json:"last_present_block"`
+	ProducedBlocks      string `json:"produced_blocks_counter"`
+	Moniker             string `json:"moniker"`
+	ValidatorAddress    string `json:"address"`
+	NodeID              string `json:"node_id"`
+	GenesisChecksum     string `json:"gen_sha256"`
+	SeatClaimAvailable  bool   `json:"seat_claim_available"`
+}
+
+func GetDashboardInfo(sshClient *ssh.Client, shidaiPort int) (*Dashboard, error) {
+	o, err := ExecHttpRequestBySSHTunnel(sshClient, fmt.Sprintf("http://localhost:%v/dashboard", shidaiPort), "GET", nil)
+	if err != nil {
+		return nil, err
+	}
+	var data *Dashboard
+	err = json.Unmarshal(o, &data)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
