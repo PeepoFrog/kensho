@@ -117,9 +117,13 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 
 		// TODO: first maybe we should try to restart first if shidai is not running
 		var deployButtonCheck bool
-		if !shidaiCheck && !interxCheck && !sekaiCheck {
+
+		if !shidaiCheck && !sekaiCheck {
 			deployButtonCheck = true
 			log.Println("1st deploy check set", deployButtonCheck)
+
+		}
+		if !deployButtonCheck {
 			if shidaiInfra && (!sekaiInfra && !interxInfra) {
 				deployButtonCheck = true
 				log.Println("2st deploy check set", deployButtonCheck)
