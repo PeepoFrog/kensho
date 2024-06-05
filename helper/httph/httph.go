@@ -195,6 +195,8 @@ func CreateTunnelForSSEConnection(sshClient *ssh.Client, address string) (*http.
 
 // TODO:
 type Dashboard struct {
+	RoleIDs []string `json:"role_ids"`
+
 	Date                string `json:"date"`
 	ValidatorStatus     string `json:"val_status"`
 	Blocks              string `json:"blocks"`
@@ -207,20 +209,31 @@ type Dashboard struct {
 	ProducedBlocks      string `json:"produced_blocks_counter"`
 	Moniker             string `json:"moniker"`
 	ValidatorAddress    string `json:"address"`
+	ChainID             string `json:"chain_id"`
 	NodeID              string `json:"node_id"`
-	GenesisChecksum     string `json:"gen_sha256"`
-	SeatClaimAvailable  bool   `json:"seat_claim_available"`
+	GenesisChecksum     string `json:"genesis_checksum"`
+
+	ActiveValidators   int `json:"active_validators"`
+	PausedValidators   int `json:"paused_validators"`
+	InactiveValidators int `json:"inactive_validators"`
+	JailedValidators   int `json:"jailed_validatore"`
+	WaitingValidators  int `json:"waiting_validators"`
+
+	SeatClaimAvailable bool `json:"seat_claim_available"`
+	Waiting            bool `json:"seat_claim_pending"`
+	CatchingUp         bool `json:"catching_up"`
 }
 
 func GetDashboardInfo(sshClient *ssh.Client, shidaiPort int) (*Dashboard, error) {
-	o, err := ExecHttpRequestBySSHTunnel(sshClient, fmt.Sprintf("http://localhost:%v/dashboard", shidaiPort), "GET", nil)
+	url := fmt.Sprintf("http://localhost:%v/dashboard", shidaiPort)
+	o, err := ExecHttpRequestBySSHTunnel(sshClient, url, "GET", nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ERROR getting request from <%v>, reason: %w", url, err)
 	}
 	var data *Dashboard
 	err = json.Unmarshal(o, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ERROR when unmarshaling <%v>\nReason: %w", string(o), err)
 	}
 	return data, nil
 }
