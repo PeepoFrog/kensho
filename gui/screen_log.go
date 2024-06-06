@@ -5,7 +5,6 @@ import (
 	"context"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -17,8 +16,8 @@ import (
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/KiraCore/kensho/helper/httph"
 	"github.com/atotto/clipboard"
-	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -84,7 +83,7 @@ func makeLogTab(g *Gui, addressToListen string, logType string) fyne.CanvasObjec
 		cancelAndCreateFunc()
 	})
 	startStopFunc := func() {
-		resp, err := createTunnelForSSEConnection(g.sshClient, addressToListen)
+		resp, err := httph.CreateTunnelForSSEConnection(g.sshClient, addressToListen)
 		if err != nil {
 			log.Println(err)
 			return
@@ -226,34 +225,4 @@ func truncateString(s string, maxSize int) string {
 		return ""
 	}
 	return s
-}
-
-func createTunnelForSSEConnection(sshClient *ssh.Client, address string) (*http.Response, error) {
-	dialer := func(network, addr string) (net.Conn, error) {
-		return sshClient.Dial(network, addr)
-	}
-
-	httpTransport := &http.Transport{
-		Dial: dialer,
-	}
-
-	httpClient := &http.Client{
-		Transport: httpTransport,
-	}
-
-	req, err := http.NewRequest("GET", address, nil)
-	if err != nil {
-		log.Printf("Failed to create HTTP request: %v", err)
-		return nil, err
-	}
-	req.Header.Set("Accept", "text/event-stream")
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		log.Printf("Failed to send HTTP request: %v", err)
-		return nil, err
-
-	}
-
-	return resp, nil
 }

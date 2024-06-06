@@ -9,29 +9,22 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/KiraCore/kensho/helper/httph"
 	"github.com/KiraCore/kensho/types"
-	"github.com/KiraCore/kensho/types/endpoint/shidai"
 )
 
 func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 	const STATUS_Unavailable = "Unavailable"
 	const STATUS_Running = "Running"
 
-	var dataListenerForSuccesses binding.DataListener
-	deployButton := widget.NewButton("Deploy", func() {
-		showDeployDialog(g, dataListenerForSuccesses)
-	})
-	deployButton.Disable()
-
-	shidaiStatusBinding := binding.NewUntyped()
+	// shidaiStatusBinding := binding.NewUntyped()
 
 	// getShidaiStatus := func() shidai.Status {
 	// 	status, _ := shidaiStatusBinding.Get()
 	// 	return status.(shidai.Status)
 	// }
 
-	setShidaiStatus := func(status shidai.Status) {
-		shidaiStatusBinding.Set(status)
-	}
+	// setShidaiStatus := func(status shidai.Status) {
+	// 	shidaiStatusBinding.Set(status)
+	// }
 
 	interxStatusCheck := binding.NewBool()
 	interxInfraCheck := binding.NewBool()
@@ -57,6 +50,12 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 		sekaiStatusInfo,
 	)
 
+	var dataListenerForSuccesses binding.DataListener
+	deployButton := widget.NewButton("Deploy", func() {
+		showDeployDialog(g, dataListenerForSuccesses, shidaiInfraCheck)
+	})
+	deployButton.Disable()
+
 	checkInterxStatus := func() {
 		_, err := httph.GetInterxStatus(g.Host.IP)
 		if err != nil {
@@ -79,12 +78,13 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 			shidaiStatusCheck.Set(false)
 
 		} else {
-			setShidaiStatus(*shidaiStatus)
+			log.Println("switching  shidai state")
 			shidaiStatusInfo.SetText(STATUS_Running)
 			shidaiInfraCheck.Set(shidaiStatus.Shidai.Infra)
 			sekaiInfraCheck.Set(shidaiStatus.Sekai.Infra)
 			interxInfraCheck.Set(shidaiStatus.Interx.Infra)
 			shidaiStatusCheck.Set(true)
+
 		}
 	}
 
@@ -109,12 +109,33 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 		sekaiCheck, _ := sekaiStatusCheck.Get()
 		interxCheck, _ := interxStatusCheck.Get()
 
-		// first maybe we should try to restart first if shidai is not running
-		if !shidaiCheck && !interxCheck && !sekaiCheck {
+		shidaiInfra, _ := shidaiInfraCheck.Get()
+		sekaiInfra, _ := sekaiInfraCheck.Get()
+		interxInfra, _ := interxInfraCheck.Get()
+		log.Printf("CHECKS: shidaiCheck:%v sekaiCheck:%v interxCheck:%v shidaiInfra:%v sekaiInfra:%v interxInfra:%v",
+			shidaiCheck, sekaiCheck, interxCheck, shidaiInfra, sekaiInfra, interxInfra)
+
+		// TODO: first maybe we should try to restart first if shidai is not running
+		var deployButtonCheck bool
+
+		if !shidaiCheck && !sekaiCheck {
+			deployButtonCheck = true
+			log.Println("1st deploy check set", deployButtonCheck)
+
+		}
+		if !deployButtonCheck {
+			if shidaiInfra && (!sekaiInfra && !interxInfra) {
+				deployButtonCheck = true
+				log.Println("2st deploy check set", deployButtonCheck)
+			}
+		}
+
+		log.Println("enable state: ", deployButtonCheck)
+		if deployButtonCheck {
 			deployButton.Enable()
 		}
 
-		g.WaitDialog.HideWaitDialog()
+		defer g.WaitDialog.HideWaitDialog()
 	}
 
 	refreshButton := widget.NewButton("Refresh", func() {

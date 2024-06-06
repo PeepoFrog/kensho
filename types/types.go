@@ -1,9 +1,10 @@
 package types
 
 const (
-	BOOTSTRAP_SCRIPT       string = "https://raw.githubusercontent.com/KiraCore/sekin/main/scripts/bootstrap.sh"
-	SEKIN_EXECUTE_ENDPOINT string = "http://localhost:8282/api/execute"
-	SEKIN_STATUS_ENDPOINT  string = "http://localhost:8282/api/execute"
+	BOOTSTRAP_SCRIPT           string = "https://raw.githubusercontent.com/KiraCore/sekin/main/scripts/bootstrap.sh"
+	SEKIN_EXECUTE_ENDPOINT     string = "http://localhost:8282/api/execute"
+	SEKIN_EXECUTE_CMD_ENDPOINT string = "http://localhost:8282/api/execute/tx"
+	SEKIN_STATUS_ENDPOINT      string = "http://localhost:8282/api/status"
 
 	DEFAULT_INTERX_PORT int = 11000
 	DEFAULT_P2P_PORT    int = 26656
@@ -25,4 +26,17 @@ type Args struct {
 	P2PPort    int    `json:"p2p_port"`
 	Mnemonic   string `json:"mnemonic"`
 	Local      bool   `json:"local"`
+}
+
+type Cmd string
+
+const (
+	Activate           Cmd = "activate"
+	Pause              Cmd = "pause"
+	Unpause            Cmd = "unpause"
+	ClaimValidatorSeat Cmd = "claim_seat"
+)
+
+type ExecSekaiCmd struct {
+	TX Cmd `json:"tx"` //pause, unpause, activate,
 }

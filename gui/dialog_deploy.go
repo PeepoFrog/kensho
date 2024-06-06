@@ -17,7 +17,7 @@ import (
 	"github.com/KiraCore/kensho/types"
 )
 
-func showDeployDialog(g *Gui, doneListener binding.DataListener) {
+func showDeployDialog(g *Gui, doneListener binding.DataListener, shidaiInfra binding.Bool) {
 	var wizard *dialogWizard.Wizard
 
 	ipToJoinEntry := widget.NewEntry()
@@ -134,20 +134,21 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener) {
 		}
 
 		sP, _ := sudoPasswordBinding.Get()
+		sInfra, _ := shidaiInfra.Get()
+		if !sInfra {
+			cmdForDeploy := fmt.Sprintf(`echo '%v' | sudo -S sh -c "$(curl -s --show-error --fail %v 2>&1)"`, sP, types.BOOTSTRAP_SCRIPT)
+			showCmdExecDialogAndRunCmdV4(g, "Deploying", cmdForDeploy, true, deployErrorBinding, errorMessageBinding)
 
-		cmdForDeploy := fmt.Sprintf(`echo '%v' | sudo -S sh -c "$(curl -s --show-error --fail %v 2>&1)"`, sP, types.BOOTSTRAP_SCRIPT)
-		// cmdForDeploy = fmt.Sprintf(`echo %v`, sP) // for quick testing
-		showCmdExecDialogAndRunCmdV4(g, "Deploying", cmdForDeploy, true, deployErrorBinding, errorMessageBinding)
-
-		errB, _ := deployErrorBinding.Get()
-		if errB {
-			errMsg, _ := errorMessageBinding.Get()
-			g.showErrorDialog(fmt.Errorf("error while checking the sudo password: %v ", errMsg), binding.NewDataListener(func() {}))
-			return
+			errB, _ := deployErrorBinding.Get()
+			if errB {
+				errMsg, _ := errorMessageBinding.Get()
+				g.showErrorDialog(fmt.Errorf("error while checking the sudo password: %v ", errMsg), binding.NewDataListener(func() {}))
+				return
+			}
+			time.Sleep(time.Second * 3)
 		}
 
 		g.WaitDialog.ShowWaitDialog()
-		time.Sleep(time.Second * 3)
 		jsonPayload, err := json.Marshal(payload)
 		if err != nil {
 			log.Printf("Failed to marshal JSON payload: %v", err)
@@ -160,7 +161,6 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener) {
 		g.WaitDialog.HideWaitDialog()
 
 		if err != nil {
-			log.Println("Showing error====")
 			g.showErrorDialog(err, binding.NewDataListener(func() {}))
 			return
 		}

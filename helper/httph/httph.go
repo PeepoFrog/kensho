@@ -65,16 +65,33 @@ func GetSekaiStatus(nodeIP, port string) (*sekaiendpoint.Status, error) {
 	return info, nil
 }
 
-func GetShidaiStatus(sshClient *ssh.Client, shidaiPort int) (*shidaiendpoint.Status, error) {
+func GetShidaiStatus(sshClient *ssh.Client, shidaiPort int) (shidaiendpoint.Status, error) {
+	valid := ValidatePortRange(strconv.Itoa(shidaiPort))
+	if !valid {
+		return shidaiendpoint.Status{}, fmt.Errorf("<%v> is not valid", shidaiPort)
+	}
+	o, err := ExecHttpRequestBySSHTunnel(sshClient, fmt.Sprintf("http://localhost:%v/status", shidaiPort), "GET", nil)
+	if err != nil {
+		return shidaiendpoint.Status{}, err
+	}
+	var data shidaiendpoint.Status
+	err = json.Unmarshal(o, &data)
+	if err != nil {
+		return shidaiendpoint.Status{}, err
+	}
+	return data, err
+}
+
+func GetValidatorStatus(sshClient *ssh.Client, shidaiPort int) (*shidaiendpoint.Validator, error) {
 	valid := ValidatePortRange(strconv.Itoa(shidaiPort))
 	if !valid {
 		return nil, fmt.Errorf("<%v> is not valid", shidaiPort)
 	}
-	o, err := ExecHttpRequestBySSHTunnel(sshClient, fmt.Sprintf("http://localhost:%v/status", shidaiPort), "GET", nil)
+	o, err := ExecHttpRequestBySSHTunnel(sshClient, fmt.Sprintf("http://localhost:%v/validator", shidaiPort), "GET", nil)
 	if err != nil {
 		return nil, err
 	}
-	var data shidaiendpoint.Status
+	var data shidaiendpoint.Validator
 	err = json.Unmarshal(o, &data)
 	if err != nil {
 		return nil, err
@@ -99,6 +116,7 @@ func ValidateIP(input string) bool {
 }
 
 func ExecHttpRequestBySSHTunnel(sshClient *ssh.Client, address, method string, payload []byte) ([]byte, error) {
+	log.Printf("requesting <%v>\nPayload: %+v", address, payload)
 	dialer := func(network, addr string) (net.Conn, error) {
 		conn, err := sshClient.Dial(network, addr)
 		if err != nil {
@@ -143,4 +161,79 @@ func ExecHttpRequestBySSHTunnel(sshClient *ssh.Client, address, method string, p
 	}
 
 	return out, nil
+}
+
+func CreateTunnelForSSEConnection(sshClient *ssh.Client, address string) (*http.Response, error) {
+	dialer := func(network, addr string) (net.Conn, error) {
+		return sshClient.Dial(network, addr)
+	}
+
+	httpTransport := &http.Transport{
+		Dial: dialer,
+	}
+
+	httpClient := &http.Client{
+		Transport: httpTransport,
+	}
+
+	req, err := http.NewRequest("GET", address, nil)
+	if err != nil {
+		log.Printf("Failed to create HTTP request: %v", err)
+		return nil, err
+	}
+	req.Header.Set("Accept", "text/event-stream")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		log.Printf("Failed to send HTTP request: %v", err)
+		return nil, err
+
+	}
+
+	return resp, nil
+}
+
+// TODO:
+type Dashboard struct {
+	RoleIDs []string `json:"role_ids"`
+
+	Date                string `json:"date"`
+	ValidatorStatus     string `json:"val_status"`
+	Blocks              string `json:"blocks"`
+	Top                 string `json:"top"`
+	Streak              string `json:"streak"`
+	Mischance           string `json:"mischance"`
+	MischanceConfidence string `json:"mischance_confidence"`
+	StartHeight         string `json:"start_height"`
+	LastProducedBlock   string `json:"last_present_block"`
+	ProducedBlocks      string `json:"produced_blocks_counter"`
+	Moniker             string `json:"moniker"`
+	ValidatorAddress    string `json:"address"`
+	ChainID             string `json:"chain_id"`
+	NodeID              string `json:"node_id"`
+	GenesisChecksum     string `json:"genesis_checksum"`
+
+	ActiveValidators   int `json:"active_validators"`
+	PausedValidators   int `json:"paused_validators"`
+	InactiveValidators int `json:"inactive_validators"`
+	JailedValidators   int `json:"jailed_validatore"`
+	WaitingValidators  int `json:"waiting_validators"`
+
+	SeatClaimAvailable bool `json:"seat_claim_available"`
+	Waiting            bool `json:"seat_claim_pending"`
+	CatchingUp         bool `json:"catching_up"`
+}
+
+func GetDashboardInfo(sshClient *ssh.Client, shidaiPort int) (*Dashboard, error) {
+	url := fmt.Sprintf("http://localhost:%v/dashboard", shidaiPort)
+	o, err := ExecHttpRequestBySSHTunnel(sshClient, url, "GET", nil)
+	if err != nil {
+		return nil, fmt.Errorf("ERROR getting request from <%v>, reason: %w", url, err)
+	}
+	var data *Dashboard
+	err = json.Unmarshal(o, &data)
+	if err != nil {
+		return nil, fmt.Errorf("ERROR when unmarshaling <%v>\nReason: %w", string(o), err)
+	}
+	return data, nil
 }

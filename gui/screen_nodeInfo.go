@@ -1,7 +1,10 @@
 package gui
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -11,76 +14,323 @@ import (
 	"github.com/atotto/clipboard"
 
 	"github.com/KiraCore/kensho/helper/httph"
+	"github.com/KiraCore/kensho/types"
+	"github.com/KiraCore/kensho/types/endpoint/shidai"
 )
 
-// type InfoScreen struct {
-// 	NodeIP string
-// }
-
 func makeNodeInfoScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
+
+	// nodeInfoTab := container.NewTabItem("Node Info", makeNodeInfoTab(g))
+	// validatorInfoTab := container.NewTabItem("Validator Info", makeValidatorInfoTab(g))
+	// return container.NewAppTabs(nodeInfoTab, validatorInfoTab)
+
+	return makeNodeInfoTab(g)
+}
+
+func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	// TODO: only for testing, delete later
 	// g.Host.IP = "148.251.69.56"
-	//
-
+	var claimSeat bool
 	// latest block box
+	var refreshBinding binding.DataListener
+
+	validatorControlButton := widget.NewButton("", func() {})
+	validatorControlButton.Disable()
+	validatorControlButton.Hide()
+
+	claimSeatButton := widget.NewButton("Claim validator seat", func() {})
+	claimSeatButton.Hide()
+
 	latestBlockData := binding.NewString()
 	latestBlockLabel := widget.NewLabelWithData(latestBlockData)
-	latestBlockBox := container.NewHBox(
-		widget.NewLabel("Latest Block"), latestBlockLabel,
-	)
+	// latestBlockBox := container.NewHBox(
+	// 	widget.NewLabel("Block:"), latestBlockLabel,
+	// )
 
 	// validator address box
 	validatorAddressData := binding.NewString()
 	validatorAddressLabel := widget.NewLabelWithData(validatorAddressData)
-	validatorAddressBox := container.NewHBox(
-		widget.NewLabel("Validator Address: "), validatorAddressLabel,
-		widget.NewButtonWithIcon("Copy", theme.ContentCopyIcon(), func() {
-			data, err := validatorAddressData.Get()
-			if err != nil {
-				log.Println(err)
-				return
-			}
+	validatorAddressCopyButton := widget.NewButtonWithIcon("Copy", theme.ContentCopyIcon(), func() {
+		data, err := validatorAddressData.Get()
+		if err != nil {
+			log.Println(err)
+			return
+		}
 
-			err = clipboard.WriteAll(data)
-			if err != nil {
-				return
-			}
-		}),
-	)
-	// public ip box
-	publicIpData := binding.NewString()
-	publicIpLabel := widget.NewLabelWithData(publicIpData)
-	publicIpBox := container.NewHBox(
-		widget.NewLabel("Public IP Address: "), publicIpLabel,
-	)
+		err = clipboard.WriteAll(data)
+		if err != nil {
+			return
+		}
+	})
+
+	//validator status (active, paused, etc...)
+	validatorStatusData := binding.NewString()
+	validatorStatusLabel := widget.NewLabelWithData(validatorStatusData)
+	// validatorStatusBox := container.NewHBox(
+	// 	widget.NewLabel("Val.Status:\t\t"), validatorStatusLabel,
+	// 	validatorControlButton,
+	// )
+	// nodeID
+	nodeIDData := binding.NewString()
+	nodeIDLabel := widget.NewLabelWithData(nodeIDData)
+	// nodeIDBox := container.NewHBox(
+	// 	widget.NewLabel("Val.NodeID:\t\t"), nodeIDLabel,
+	// )
+
+	topData := binding.NewString()
+	topLabel := widget.NewLabelWithData(topData)
+	// topBox := container.NewHBox(
+	// 	widget.NewLabel("Rank:\t\t"), topLabel,
+	// )
 
 	// miss chance box
 	missChanceData := binding.NewString()
 	missChanceLabel := widget.NewLabelWithData(missChanceData)
-	missChanceBox := container.NewHBox(
-		widget.NewLabel("Miss Chance: "), missChanceLabel,
+	// missChanceBox := container.NewHBox(
+	// 	widget.NewLabel("Miss:\t\t"), missChanceLabel,
+	// )
+
+	lastProducedBlockData := binding.NewString()
+	lastProducedLabel := widget.NewLabelWithData(lastProducedBlockData)
+	// lastProducedBox := container.NewHBox(
+	// 	widget.NewLabel("Latest Block:\t\t"), lastProducedLabel,
+	// )
+
+	// miss Chance Confidence box
+	missChanceConfidenceData := binding.NewString()
+	missChanceConfidenceLabel := widget.NewLabelWithData(missChanceConfidenceData)
+	// missChanceConfidenceBox := container.NewHBox(
+	// 	widget.NewLabel("Miss conf.\t\t"), missChanceConfidenceLabel,
+	// )
+
+	startHeightData := binding.NewString()
+	startHeightLabel := widget.NewLabelWithData(startHeightData)
+	// startHeightBox := container.NewHBox(
+	// 	widget.NewLabel("Start Height:\t\t"), startHeightLabel,
+	// )
+
+	producedBlocksData := binding.NewString()
+	producedBlocksLabel := widget.NewLabelWithData(producedBlocksData)
+	// producedBlocksBox := container.NewHBox(
+	// 	widget.NewLabel("Produced:\t\t"), producedBlocksLabel,
+	// )
+
+	monikerData := binding.NewString()
+	monikerLabel := widget.NewLabelWithData(monikerData)
+	// monikerBox := container.NewHBox(
+	// 	widget.NewLabel("Moniker:\t\t"), monikerLabel,
+	// )
+
+	genesisChecksumData := binding.NewString()
+	genesisChecksumLabel := widget.NewLabelWithData(genesisChecksumData)
+	// genesisChecksumBox := container.NewHBox(
+	// 	widget.NewLabel("Gen. SHA256::\t\t"), genesisChecksumLabel,
+	// )
+
+	// Numerical validators status
+	activeValidatorsData := binding.NewInt()
+	activeValidatorsLabel := widget.NewLabelWithData(binding.IntToString(activeValidatorsData))
+	activeValidatorsLabel.Alignment = fyne.TextAlignCenter
+	activeValidatorsInfoText := widget.NewLabel("Active:")
+	activeValidatorsInfoText.TextStyle.Bold = true
+	activeValidatorsBox := container.NewVBox(
+		activeValidatorsInfoText, activeValidatorsLabel,
 	)
 
-	refreshScreen := func() {
+	pausedValidatorsData := binding.NewInt()
+	pausedValidatorsLabel := widget.NewLabelWithData(binding.IntToString(pausedValidatorsData))
+	pausedValidatorsLabel.Alignment = fyne.TextAlignCenter
+	pausedValidatorsInfoText := widget.NewLabel("Paused:")
+	pausedValidatorsInfoText.TextStyle.Bold = true
+	pausedValidatorsBox := container.NewVBox(
+		pausedValidatorsInfoText, pausedValidatorsLabel,
+	)
+
+	inactiveValidatorsData := binding.NewInt()
+	inactiveValidatorsLabel := widget.NewLabelWithData(binding.IntToString(inactiveValidatorsData))
+	inactiveValidatorsLabel.Alignment = fyne.TextAlignCenter
+	inactiveValidatorsInfoText := widget.NewLabel("Inactive:")
+	inactiveValidatorsInfoText.TextStyle.Bold = true
+
+	inactiveValidatorsBox := container.NewVBox(
+		inactiveValidatorsInfoText, inactiveValidatorsLabel,
+	)
+
+	jailedValidatorsData := binding.NewInt()
+	jailedValidatorsLabel := widget.NewLabelWithData(binding.IntToString(jailedValidatorsData))
+	jailedValidatorsLabel.Alignment = fyne.TextAlignCenter
+
+	jailedValidatorsInfoText := widget.NewLabel("Jailed:")
+	jailedValidatorsInfoText.TextStyle.Bold = true
+
+	jailedValidatorsBox := container.NewVBox(
+		jailedValidatorsInfoText, jailedValidatorsLabel,
+	)
+
+	waitingValidatorsData := binding.NewInt()
+	waitingValidatorsLabel := widget.NewLabelWithData(binding.IntToString(waitingValidatorsData))
+	waitingValidatorsLabel.Alignment = fyne.TextAlignCenter
+
+	waitingValidatorsInfoText := widget.NewLabel("Waiting:")
+	waitingValidatorsInfoText.TextStyle.Bold = true
+
+	waitingValidatorsBox := container.NewVBox(
+		waitingValidatorsInfoText, waitingValidatorsLabel,
+	)
+
+	chainIDData := binding.NewString()
+	chainIDLabel := widget.NewLabelWithData(chainIDData)
+
+	// dateData := binding.NewString()
+	// dateLabel := widget.NewLabelWithData(dateData)
+	// dateBox := container.NewHBox(
+	// 	widget.NewLabel("Date:\t\t"), dateLabel,
+	// )
+
+	streakData := binding.NewString()
+	streakLabel := widget.NewLabelWithData(streakData)
+
+	//
+	valuesForm := widget.NewForm(
+		widget.NewFormItem("ChainID:", chainIDLabel),
+		widget.NewFormItem("Moniker:", monikerLabel),
+		widget.NewFormItem("Val.Status:", validatorStatusLabel),
+		widget.NewFormItem("Block:", latestBlockLabel),
+		widget.NewFormItem("Latest Block:", lastProducedLabel),
+		widget.NewFormItem("Produced:", producedBlocksLabel),
+		widget.NewFormItem("Streak:", streakLabel),
+		widget.NewFormItem("Rank:", topLabel),
+		widget.NewFormItem("Miss:", missChanceLabel),
+		widget.NewFormItem("Miss conf.", missChanceConfidenceLabel),
+		widget.NewFormItem("Start Height:", startHeightLabel),
+		widget.NewFormItem("Val.Addr:", container.NewHBox(validatorAddressLabel, validatorAddressCopyButton)),
+		widget.NewFormItem("Val.NodeID:", nodeIDLabel),
+		widget.NewFormItem("Gen.SHA256:", genesisChecksumLabel),
+	)
+
+	execFunc := func(arg types.Cmd) {
 		g.WaitDialog.ShowWaitDialog()
-		defer g.WaitDialog.HideWaitDialog()
-		i, err := httph.GetInterxStatus(g.Host.IP)
+		payload, err := json.Marshal(types.ExecSekaiCmd{TX: arg})
+		log.Printf("Executing: %v", arg)
 		if err != nil {
-			return
+			g.showErrorDialog(err, binding.NewDataListener(func() {}))
 		}
-		latestBlockData.Set(i.InterxInfo.LatestBlockHeight)
+		httph.ExecHttpRequestBySSHTunnel(g.sshClient, types.SEKIN_EXECUTE_CMD_ENDPOINT, "POST", payload)
+		g.WaitDialog.HideWaitDialog()
+
+		refreshBinding.DataChanged()
+	}
+
+	claimSeatButton.OnTapped = func() {
+		//claim seat
+		execFunc(types.ClaimValidatorSeat)
+	}
+	pauseValidatorFunc := func() {
+		// pause
+		execFunc(types.Pause)
+	}
+	unpauseValidatorFunc := func() {
+		// unpause tx
+		execFunc(types.Unpause)
+	}
+	activateValidatorFunc := func() {
+		// activate
+		execFunc(types.Activate)
 
 	}
 
-	refreshButton := widget.NewButton("Refresh", refreshScreen)
-	sendSekaiCommandButton := widget.NewButton("Execute sekai command", func() { showSekaiExecuteDialog(g) })
+	errBinding := binding.NewUntyped()
+	refreshScreen := func() {
+		g.WaitDialog.ShowWaitDialog()
+		defer g.WaitDialog.HideWaitDialog()
+		dashboardData, err := httph.GetDashboardInfo(g.sshClient, 8282)
+		if err != nil {
+			errBinding.Set(fmt.Errorf("ERROR: getting dashboard info: %w", err))
+			return
+		}
+
+		log.Printf("dashboard %+v", dashboardData)
+		claimSeat = dashboardData.SeatClaimAvailable
+		if claimSeat {
+			claimSeatButton.Show()
+		} else {
+			claimSeatButton.Hide()
+		}
+
+		if dashboardData.ValidatorStatus != "Unknown" {
+			status := strings.ToUpper(dashboardData.ValidatorStatus)
+			switch status {
+			case string(shidai.Active):
+				if validatorControlButton.Disabled() {
+					validatorControlButton.Enable()
+					validatorControlButton.Show()
+					validatorControlButton.SetText("Pause")
+					validatorControlButton.OnTapped = pauseValidatorFunc
+				}
+			case string(shidai.Paused):
+				if validatorControlButton.Disabled() {
+					validatorControlButton.Enable()
+					validatorControlButton.Show()
+					validatorControlButton.SetText("Unpause")
+					validatorControlButton.OnTapped = unpauseValidatorFunc
+				}
+			case string(shidai.Inactive):
+				if validatorControlButton.Disabled() {
+					validatorControlButton.Enable()
+					validatorControlButton.Show()
+					validatorControlButton.SetText("Activate")
+					validatorControlButton.OnTapped = activateValidatorFunc
+				}
+			}
+		}
+		nodeIDData.Set(dashboardData.NodeID)
+		topData.Set(dashboardData.Top)
+		validatorAddressData.Set(dashboardData.ValidatorAddress)
+		missChanceData.Set(dashboardData.Mischance)
+
+		validatorStatusData.Set(dashboardData.ValidatorStatus)
+
+		latestBlockData.Set(dashboardData.Blocks)
+		lastProducedBlockData.Set(dashboardData.LastProducedBlock)
+		missChanceConfidenceData.Set(dashboardData.MischanceConfidence)
+		producedBlocksData.Set(dashboardData.ProducedBlocks)
+
+		startHeightData.Set(dashboardData.StartHeight)
+		monikerData.Set(dashboardData.Moniker)
+		activeValidatorsData.Set(dashboardData.ActiveValidators)
+		pausedValidatorsData.Set(dashboardData.PausedValidators)
+		inactiveValidatorsData.Set(dashboardData.InactiveValidators)
+		jailedValidatorsData.Set(dashboardData.JailedValidators)
+		waitingValidatorsData.Set(dashboardData.WaitingValidators)
+		genesisChecksumData.Set(dashboardData.GenesisChecksum)
+		chainIDData.Set(dashboardData.ChainID)
+		// dateData.Set(dashboardData.Date)
+		streakData.Set(dashboardData.Streak)
+		// dashboardData.CatchingUp,
+		// widget.NewLabel()
+
+	}
+	refreshBinding = binding.NewDataListener(func() {
+		refreshScreen()
+		err, _ := errBinding.Get()
+		if err != nil {
+			if e, ok := err.(error); ok {
+				g.showErrorDialog(e, binding.NewDataListener(func() {}))
+			}
+		}
+	})
+	refreshButton := widget.NewButton("Refresh", refreshBinding.DataChanged)
+	// sendSekaiCommandButton := widget.NewButton("Execute sekai command", func() { showSekaiExecuteDialog(g) })
 	mainInfo := container.NewVScroll(
 		container.NewVBox(
-			latestBlockBox,
-			validatorAddressBox,
-			publicIpBox,
-			missChanceBox,
+			widget.NewSeparator(),
+			valuesForm,
+			validatorControlButton,
 		),
 	)
-	return container.NewBorder(sendSekaiCommandButton, refreshButton, nil, nil, mainInfo)
+
+	validatorsTopPart := container.NewHBox(activeValidatorsBox, pausedValidatorsBox, inactiveValidatorsBox, jailedValidatorsBox, waitingValidatorsBox)
+
+	// return container.NewBorder(nil, refreshButton, nil, validatorsRightPart, mainInfo)
+	return container.NewBorder(container.NewCenter(validatorsTopPart), refreshButton, nil, nil, mainInfo)
 }
