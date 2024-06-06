@@ -137,6 +137,9 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	// 	widget.NewLabel("Gen. SHA256::\t\t"), genesisChecksumLabel,
 	// )
 
+	nodeCatchingData := binding.NewString()
+	nodeCatchingLabel := widget.NewLabelWithData(nodeCatchingData)
+
 	// Numerical validators status
 	activeValidatorsData := binding.NewInt()
 	activeValidatorsLabel := widget.NewLabelWithData(binding.IntToString(activeValidatorsData))
@@ -205,6 +208,7 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		widget.NewFormItem("ChainID:", chainIDLabel),
 		widget.NewFormItem("Moniker:", monikerLabel),
 		widget.NewFormItem("Val.Status:", validatorStatusLabel),
+		widget.NewFormItem("Node Status:", nodeCatchingLabel),
 		widget.NewFormItem("Block:", latestBlockLabel),
 		widget.NewFormItem("Latest Block:", lastProducedLabel),
 		widget.NewFormItem("Produced:", producedBlocksLabel),
@@ -316,6 +320,12 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		chainIDData.Set(dashboardData.ChainID)
 		// dateData.Set(dashboardData.Date)
 		streakData.Set(dashboardData.Streak)
+
+		if dashboardData.CatchingUp {
+			nodeCatchingData.Set("Syncing")
+		} else {
+			nodeCatchingData.Set("Running")
+		}
 		// dashboardData.CatchingUp,
 		// widget.NewLabel()
 
