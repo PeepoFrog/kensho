@@ -43,129 +43,143 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 
 	latestBlockData := binding.NewString()
 	latestBlockLabel := widget.NewLabelWithData(latestBlockData)
-	latestBlockBox := container.NewHBox(
-		widget.NewLabel("Block:"), latestBlockLabel,
-	)
+	// latestBlockBox := container.NewHBox(
+	// 	widget.NewLabel("Block:"), latestBlockLabel,
+	// )
 
 	// validator address box
 	validatorAddressData := binding.NewString()
 	validatorAddressLabel := widget.NewLabelWithData(validatorAddressData)
-	validatorAddressBox := container.NewHBox(
-		widget.NewLabel("Val.Addr: "), validatorAddressLabel,
-		widget.NewButtonWithIcon("Copy", theme.ContentCopyIcon(), func() {
-			data, err := validatorAddressData.Get()
-			if err != nil {
-				log.Println(err)
-				return
-			}
+	validatorAddressCopyButton := widget.NewButtonWithIcon("Copy", theme.ContentCopyIcon(), func() {
+		data, err := validatorAddressData.Get()
+		if err != nil {
+			log.Println(err)
+			return
+		}
 
-			err = clipboard.WriteAll(data)
-			if err != nil {
-				return
-			}
-		}),
-	)
+		err = clipboard.WriteAll(data)
+		if err != nil {
+			return
+		}
+	})
 
 	//validator status (active, paused, etc...)
 	validatorStatusData := binding.NewString()
 	validatorStatusLabel := widget.NewLabelWithData(validatorStatusData)
-	validatorStatusBox := container.NewHBox(
-		widget.NewLabel("Val.Status:\t\t"), validatorStatusLabel,
-		validatorControlButton,
-	)
+	// validatorStatusBox := container.NewHBox(
+	// 	widget.NewLabel("Val.Status:\t\t"), validatorStatusLabel,
+	// 	validatorControlButton,
+	// )
 	// nodeID
 	nodeIDData := binding.NewString()
 	nodeIDLabel := widget.NewLabelWithData(nodeIDData)
-	nodeIDBox := container.NewHBox(
-		widget.NewLabel("Val.NodeID:\t\t"), nodeIDLabel,
-	)
+	// nodeIDBox := container.NewHBox(
+	// 	widget.NewLabel("Val.NodeID:\t\t"), nodeIDLabel,
+	// )
 
 	topData := binding.NewString()
 	topLabel := widget.NewLabelWithData(topData)
-	topBox := container.NewHBox(
-		widget.NewLabel("Rank:\t\t"), topLabel,
-	)
+	// topBox := container.NewHBox(
+	// 	widget.NewLabel("Rank:\t\t"), topLabel,
+	// )
 
 	// miss chance box
 	missChanceData := binding.NewString()
 	missChanceLabel := widget.NewLabelWithData(missChanceData)
-	missChanceBox := container.NewHBox(
-		widget.NewLabel("Miss:\t\t"), missChanceLabel,
-	)
+	// missChanceBox := container.NewHBox(
+	// 	widget.NewLabel("Miss:\t\t"), missChanceLabel,
+	// )
 
 	lastProducedBlockData := binding.NewString()
 	lastProducedLabel := widget.NewLabelWithData(lastProducedBlockData)
-	lastProducedBox := container.NewHBox(
-		widget.NewLabel("Latest Block:\t\t"), lastProducedLabel,
-	)
+	// lastProducedBox := container.NewHBox(
+	// 	widget.NewLabel("Latest Block:\t\t"), lastProducedLabel,
+	// )
 
 	// miss Chance Confidence box
 	missChanceConfidenceData := binding.NewString()
 	missChanceConfidenceLabel := widget.NewLabelWithData(missChanceConfidenceData)
-	missChanceConfidenceBox := container.NewHBox(
-		widget.NewLabel("Miss conf.\t\t"), missChanceConfidenceLabel,
-	)
+	// missChanceConfidenceBox := container.NewHBox(
+	// 	widget.NewLabel("Miss conf.\t\t"), missChanceConfidenceLabel,
+	// )
 
 	startHeightData := binding.NewString()
 	startHeightLabel := widget.NewLabelWithData(startHeightData)
-	startHeightBox := container.NewHBox(
-		widget.NewLabel("Start Height:\t\t"), startHeightLabel,
-	)
+	// startHeightBox := container.NewHBox(
+	// 	widget.NewLabel("Start Height:\t\t"), startHeightLabel,
+	// )
 
 	producedBlocksData := binding.NewString()
 	producedBlocksLabel := widget.NewLabelWithData(producedBlocksData)
-	producedBlocksBox := container.NewHBox(
-		widget.NewLabel("Produced:\t\t"), producedBlocksLabel,
-	)
+	// producedBlocksBox := container.NewHBox(
+	// 	widget.NewLabel("Produced:\t\t"), producedBlocksLabel,
+	// )
 
 	monikerData := binding.NewString()
 	monikerLabel := widget.NewLabelWithData(monikerData)
-	monikerBox := container.NewHBox(
-		widget.NewLabel("Moniker:\t\t"), monikerLabel,
-	)
+	// monikerBox := container.NewHBox(
+	// 	widget.NewLabel("Moniker:\t\t"), monikerLabel,
+	// )
 
 	genesisChecksumData := binding.NewString()
 	genesisChecksumLabel := widget.NewLabelWithData(genesisChecksumData)
-	genesisChecksumBox := container.NewHBox(
-		widget.NewLabel("Gen. SHA256::\t\t"), genesisChecksumLabel,
-	)
+	// genesisChecksumBox := container.NewHBox(
+	// 	widget.NewLabel("Gen. SHA256::\t\t"), genesisChecksumLabel,
+	// )
 
 	// Numerical validators status
 	activeValidatorsData := binding.NewInt()
 	activeValidatorsLabel := widget.NewLabelWithData(binding.IntToString(activeValidatorsData))
-	activeValidatorsBox := container.NewHBox(
-		widget.NewLabel("Active:"), activeValidatorsLabel,
+	activeValidatorsLabel.Alignment = fyne.TextAlignCenter
+	activeValidatorsInfoText := widget.NewLabel("Active:")
+	activeValidatorsInfoText.TextStyle.Bold = true
+	activeValidatorsBox := container.NewVBox(
+		activeValidatorsInfoText, activeValidatorsLabel,
 	)
 
 	pausedValidatorsData := binding.NewInt()
 	pausedValidatorsLabel := widget.NewLabelWithData(binding.IntToString(pausedValidatorsData))
-	pausedValidatorsBox := container.NewHBox(
-		widget.NewLabel("Paused:"), pausedValidatorsLabel,
+	pausedValidatorsLabel.Alignment = fyne.TextAlignCenter
+	pausedValidatorsInfoText := widget.NewLabel("Paused:")
+	pausedValidatorsInfoText.TextStyle.Bold = true
+	pausedValidatorsBox := container.NewVBox(
+		pausedValidatorsInfoText, pausedValidatorsLabel,
 	)
 
 	inactiveValidatorsData := binding.NewInt()
 	inactiveValidatorsLabel := widget.NewLabelWithData(binding.IntToString(inactiveValidatorsData))
-	inactiveValidatorsBox := container.NewHBox(
-		widget.NewLabel("Inactive:"), inactiveValidatorsLabel,
+	inactiveValidatorsLabel.Alignment = fyne.TextAlignCenter
+	inactiveValidatorsInfoText := widget.NewLabel("Inactive:")
+	inactiveValidatorsInfoText.TextStyle.Bold = true
+
+	inactiveValidatorsBox := container.NewVBox(
+		inactiveValidatorsInfoText, inactiveValidatorsLabel,
 	)
 
 	jailedValidatorsData := binding.NewInt()
 	jailedValidatorsLabel := widget.NewLabelWithData(binding.IntToString(jailedValidatorsData))
-	jailedValidatorsBox := container.NewHBox(
-		widget.NewLabel("Jailed:"), jailedValidatorsLabel,
+	jailedValidatorsLabel.Alignment = fyne.TextAlignCenter
+
+	jailedValidatorsInfoText := widget.NewLabel("Jailed:")
+	jailedValidatorsInfoText.TextStyle.Bold = true
+
+	jailedValidatorsBox := container.NewVBox(
+		jailedValidatorsInfoText, jailedValidatorsLabel,
 	)
 
 	waitingValidatorsData := binding.NewInt()
 	waitingValidatorsLabel := widget.NewLabelWithData(binding.IntToString(waitingValidatorsData))
-	waitingValidatorsBox := container.NewHBox(
-		widget.NewLabel("Waiting:"), waitingValidatorsLabel,
+	waitingValidatorsLabel.Alignment = fyne.TextAlignCenter
+
+	waitingValidatorsInfoText := widget.NewLabel("Waiting:")
+	waitingValidatorsInfoText.TextStyle.Bold = true
+
+	waitingValidatorsBox := container.NewVBox(
+		waitingValidatorsInfoText, waitingValidatorsLabel,
 	)
 
 	chainIDData := binding.NewString()
 	chainIDLabel := widget.NewLabelWithData(chainIDData)
-	chainIDBox := container.NewHBox(
-		widget.NewLabel("ChainID:"), chainIDLabel,
-	)
 
 	// dateData := binding.NewString()
 	// dateLabel := widget.NewLabelWithData(dateData)
@@ -175,11 +189,25 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 
 	streakData := binding.NewString()
 	streakLabel := widget.NewLabelWithData(streakData)
-	streakBox := container.NewHBox(
-		widget.NewLabel("Streak:\t\t"), streakLabel,
-	)
 
 	//
+	valuesForm := widget.NewForm(
+		widget.NewFormItem("ChainID:", chainIDLabel),
+		widget.NewFormItem("Moniker:", monikerLabel),
+		widget.NewFormItem("Val.Status:", validatorStatusLabel),
+		widget.NewFormItem("Block:", latestBlockLabel),
+		widget.NewFormItem("Latest Block:", lastProducedLabel),
+		widget.NewFormItem("Produced:", producedBlocksLabel),
+		widget.NewFormItem("Streak:", streakLabel),
+		widget.NewFormItem("Rank:", topLabel),
+		widget.NewFormItem("Miss:", missChanceLabel),
+		widget.NewFormItem("Miss conf.", missChanceConfidenceLabel),
+		widget.NewFormItem("Start Height:", startHeightLabel),
+		widget.NewFormItem("Val.Addr:", container.NewHBox(validatorAddressLabel, validatorAddressCopyButton)),
+		widget.NewFormItem("Val.NodeID:", nodeIDLabel),
+		widget.NewFormItem("Gen.SHA256:", genesisChecksumLabel),
+	)
+
 	execFunc := func(arg types.Cmd) {
 		g.WaitDialog.ShowWaitDialog()
 		payload, err := json.Marshal(types.ExecSekaiCmd{TX: arg})
@@ -295,76 +323,14 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	// sendSekaiCommandButton := widget.NewButton("Execute sekai command", func() { showSekaiExecuteDialog(g) })
 	mainInfo := container.NewVScroll(
 		container.NewVBox(
-			container.NewVBox(
-				widget.NewLabelWithStyle("CHAIN INFO", fyne.TextAlignCenter,
-					fyne.TextStyle{Monospace: true, Bold: true, Symbol: true}),
-			),
-			container.NewHBox(activeValidatorsBox, pausedValidatorsBox),
-			container.NewHBox(inactiveValidatorsBox, waitingValidatorsBox),
-			jailedValidatorsBox,
-			chainIDBox,
-			widget.NewLabel(""),
-			monikerBox,
-
-			latestBlockBox,
-			lastProducedBox,
-			producedBlocksBox,
-			streakBox,
-			topBox,
-			startHeightBox,
-			missChanceBox,
-			missChanceConfidenceBox,
-			validatorAddressBox,
-			validatorStatusBox,
-			nodeIDBox,
-			genesisChecksumBox,
-
-			// validatorAddressBox,
-			// validatorStatusBox,
-			// nodeIDBox,
-			// topBox,
-			// latestBlockBox,
-			// lastProducedBox,
-			// missChanceBox,
-			// missChanceConfidenceBox,
-			// startHeightBox,
-			// producedBlocksBox,
-			// monikerBox,
-			// genesisChecksumBox,
-			// chainIDBox,
-			// dateBox,
-			// streakBox,
-
-			// container.N
+			widget.NewSeparator(),
+			valuesForm,
+			validatorControlButton,
 		),
 	)
-	// mainInfo := container.NewVScroll(
-	// 	container.NewVBox(
-	// 		container.NewVBox(
-	// 			widget.NewLabelWithStyle("Validator Info", fyne.TextAlignCenter,
-	// 				fyne.TextStyle{Monospace: true, Bold: true, Symbol: true}),
-	// 		),
-	// 		validatorAddressBox,
-	// 		validatorStatusBox,
-	// 		nodeIDBox,
-	// 		topBox,
-	// 		latestBlockBox,
-	// 		lastProducedBox,
-	// 		missChanceBox,
-	// 		missChanceConfidenceBox,
-	// 		startHeightBox,
-	// 		producedBlocksBox,
-	// 		monikerBox,
-	// 		genesisChecksumBox,
-	// 		chainIDBox,
-	// 		dateBox,
-	// 		streakBox,
 
-	// 		// container.N
-	// 	),
-	// )
-	// validatorsRightPart := container.NewVBox(widget.NewLabel("Vali\tdato\nrs"), activeValidatorsBox, pausedValidatorsBox, inactiveValidatorsBox, jailedValidatorsBox, waitingValidatorsBox)
+	validatorsTopPart := container.NewHBox(activeValidatorsBox, pausedValidatorsBox, inactiveValidatorsBox, jailedValidatorsBox, waitingValidatorsBox)
 
 	// return container.NewBorder(nil, refreshButton, nil, validatorsRightPart, mainInfo)
-	return container.NewBorder(nil, refreshButton, nil, nil, mainInfo)
+	return container.NewBorder(container.NewCenter(validatorsTopPart), refreshButton, nil, nil, mainInfo)
 }

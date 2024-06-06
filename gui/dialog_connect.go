@@ -238,7 +238,7 @@ func (g *Gui) ShowConnect() {
 
 		// / test ui block
 		testButton := widget.NewButton("connect to tested env", func() {
-			ipEntry.Text = "192.168.1.101"
+			ipEntry.Text = "192.168.1.102"
 			userEntry.Text = "d"
 			passwordEntry.Text = "d"
 			passphraseCheck.SetChecked(false)
