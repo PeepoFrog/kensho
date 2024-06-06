@@ -25,6 +25,7 @@ type Gui struct {
 	Terminal                Terminal
 	LogCtx                  context.Context
 	LogCtxCancel            context.CancelFunc
+	NodeInfo                nodeInfoScreen
 }
 type Host struct {
 	IP string
@@ -113,10 +114,15 @@ func (g *Gui) makeNav(setTab func(t Tab)) fyne.CanvasObject {
 			}
 		},
 		OnUnselected: func(uid widget.TreeNodeID) {
-			if uid == "logs" {
+			switch uid {
+			case "logs":
 				log.Println("Unselected: ", uid)
 				g.LogCtxCancel()
+			case "nodeInfo":
+				log.Println("Unselected: ", uid)
+				g.NodeInfo.ctxCancel()
 			}
+
 		},
 	}
 

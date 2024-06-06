@@ -1,10 +1,12 @@
 package gui
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -18,6 +20,11 @@ import (
 	"github.com/KiraCore/kensho/types/endpoint/shidai"
 )
 
+type nodeInfoScreen struct {
+	ctx       context.Context
+	ctxCancel context.CancelFunc
+}
+
 func makeNodeInfoScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 
 	// nodeInfoTab := container.NewTabItem("Node Info", makeNodeInfoTab(g))
@@ -30,6 +37,9 @@ func makeNodeInfoScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	// TODO: only for testing, delete later
 	// g.Host.IP = "148.251.69.56"
+	ctx := context.Background()
+	g.NodeInfo.ctx, g.NodeInfo.ctxCancel = context.WithCancel(ctx)
+
 	var claimSeat bool
 	// latest block box
 	var refreshBinding binding.DataListener
@@ -315,11 +325,31 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		err, _ := errBinding.Get()
 		if err != nil {
 			if e, ok := err.(error); ok {
-				g.showErrorDialog(e, binding.NewDataListener(func() {}))
+				// g.showErrorDialog(e, binding.NewDataListener(func() {}))
+				log.Printf("Refreshing unsuccessful, reason: %v", e.Error())
 			}
 		}
 	})
-	refreshButton := widget.NewButton("Refresh", refreshBinding.DataChanged)
+	go func() {
+		refreshTime := 20 * time.Second
+		log.Printf("Starting goroutine with refresh rate %v", refreshTime)
+		timer := time.NewTimer(refreshTime)
+		defer timer.Stop() // Clean up the timer when the goroutine ends
+
+		refreshBinding.DataChanged()
+		for {
+			select {
+			case <-g.NodeInfo.ctx.Done():
+				log.Printf("Ending nodeInfo refresh goroutine")
+				return
+			case <-timer.C:
+				refreshBinding.DataChanged()
+				timer.Reset(refreshTime) // Reset the timer
+			}
+		}
+	}()
+
+	// refreshButton := widget.NewButton("Refresh", refreshBinding.DataChanged)
 	// sendSekaiCommandButton := widget.NewButton("Execute sekai command", func() { showSekaiExecuteDialog(g) })
 	mainInfo := container.NewVScroll(
 		container.NewVBox(
@@ -332,5 +362,5 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	validatorsTopPart := container.NewHBox(activeValidatorsBox, pausedValidatorsBox, inactiveValidatorsBox, jailedValidatorsBox, waitingValidatorsBox)
 
 	// return container.NewBorder(nil, refreshButton, nil, validatorsRightPart, mainInfo)
-	return container.NewBorder(container.NewCenter(validatorsTopPart), refreshButton, nil, nil, mainInfo)
+	return container.NewBorder(container.NewCenter(validatorsTopPart), nil, nil, nil, mainInfo)
 }
