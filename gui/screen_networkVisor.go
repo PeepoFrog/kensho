@@ -70,8 +70,7 @@ func makeNetworkTreeScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 		nodes, _, err = networkparser.GetAllNodesV3(context.Background(), g.Host.IP, 3, false)
 
 		// TODO: for testing
-		nodes, _, err = networkparser.GetAllNodesV3(context.Background(), "148.251.69.56", 4, false)
-		// nodes, _, err = networkparser.GetAllNodesV3(context.Background(), "148.251.69.561", 4, false)
+		// nodes, _, err = networkparser.GetAllNodesV3(context.Background(), "148.251.69.56", 4, false)
 		//
 		if err != nil {
 			log.Println(err)
