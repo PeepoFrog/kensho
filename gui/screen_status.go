@@ -2,6 +2,7 @@ package gui
 
 import (
 	"log"
+	"strconv"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -57,7 +58,7 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 	deployButton.Disable()
 
 	checkInterxStatus := func() {
-		_, err := httph.GetInterxStatus(g.Host.IP)
+		_, err := httph.GetInterxStatus(g.Host.IP, strconv.Itoa(types.DEFAULT_INTERX_PORT))
 		if err != nil {
 			log.Printf("ERROR getting interx status: %v", err)
 			interxStatusInfo.SetText(STATUS_Unavailable)

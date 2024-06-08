@@ -37,8 +37,8 @@ func MakeHttpRequest(url, method string) ([]byte, error) {
 	return body, nil
 }
 
-func GetInterxStatus(nodeIP string) (*interxendpoint.Status, error) {
-	url := fmt.Sprintf("http://%v:11000/api/status", nodeIP)
+func GetInterxStatus(nodeIP, interxPort string) (*interxendpoint.Status, error) {
+	url := fmt.Sprintf("http://%v:%v/api/status", nodeIP, interxPort)
 	b, err := MakeHttpRequest(url, "GET")
 	if err != nil {
 		return nil, err
@@ -80,6 +80,37 @@ func GetShidaiStatus(sshClient *ssh.Client, shidaiPort int) (shidaiendpoint.Stat
 		return shidaiendpoint.Status{}, err
 	}
 	return data, err
+}
+
+func GetSekaiABCI_Info(nodeIP, port string) (*sekaiendpoint.ABCI_Info, error) {
+	url := fmt.Sprintf("http://%v:%v/abci_info", nodeIP, port)
+	b, err := MakeHttpRequest(url, "GET")
+	if err != nil {
+		return nil, err
+	}
+	var data sekaiendpoint.ABCI_Info
+	err = json.Unmarshal(b, &data)
+	if err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+func GetBinariesVersionsFromTrustedNode(trustedIP, sekaiRPC_Port, interxPort string) (sekaiVersion, interxVersion string, err error) {
+	log.Printf("Getting sekai and interx version from <%v>", trustedIP)
+	abci, err := GetSekaiABCI_Info(trustedIP, sekaiRPC_Port)
+	if err != nil {
+		return "", "", fmt.Errorf("error getting abci info from sekai: %w", err)
+	}
+	sekaiVersion = abci.ABCI_result.Response.Version
+
+	interxStatus, err := GetInterxStatus(trustedIP, interxPort)
+	if err != nil {
+		return "", "", fmt.Errorf("error getting interx status: %w", err)
+	}
+	interxVersion = interxStatus.InterxInfo.Version
+	log.Printf("Sekai version: <%v>  Interx version: <%v>", sekaiVersion, interxVersion)
+	return sekaiVersion, interxVersion, nil
 }
 
 func GetValidatorStatus(sshClient *ssh.Client, shidaiPort int) (*shidaiendpoint.Validator, error) {

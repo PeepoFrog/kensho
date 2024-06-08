@@ -136,7 +136,14 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener, shidaiInfra bin
 		sP, _ := sudoPasswordBinding.Get()
 		sInfra, _ := shidaiInfra.Get()
 		if !sInfra {
-			cmdForDeploy := fmt.Sprintf(`echo '%v' | sudo -S sh -c "$(curl -s --show-error --fail %v 2>&1)"`, sP, types.BOOTSTRAP_SCRIPT)
+			sekaiVersion, interxVersion, err := httph.GetBinariesVersionsFromTrustedNode(payload.Args.IP, strconv.Itoa(payload.Args.RPCPort), strconv.Itoa(payload.Args.InterxPort))
+			if err != nil {
+				g.showErrorDialog(err, binding.NewDataListener(func() {}))
+				return
+			}
+
+			// cmdForDeploy := fmt.Sprintf(`echo '%v' | sudo -S sh -c "$(curl -s --show-error --fail %v  2>&1 )"`, sP, types.BOOTSTRAP_SCRIPT)
+			cmdForDeploy := fmt.Sprintf(`echo '%v' | sudo -S sh -c "$(curl -s --show-error --fail %v  2>&1 --sekai=%v --interx=%v)"`, sP, types.BOOTSTRAP_SCRIPT, sekaiVersion, interxVersion)
 			showCmdExecDialogAndRunCmdV4(g, "Deploying", cmdForDeploy, true, deployErrorBinding, errorMessageBinding)
 
 			errB, _ := deployErrorBinding.Get()
