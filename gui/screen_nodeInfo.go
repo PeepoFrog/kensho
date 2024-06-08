@@ -225,28 +225,34 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	)
 
 	loadingData := binding.NewFloat()
-
+	loadWidget := widget.NewProgressBarWithData(loadingData)
 	loadMessage := binding.NewString()
-	txExecLoadingWidget := container.NewHBox(
-		widget.NewProgressBarWithData(loadingData), widget.NewLabelWithData(loadMessage),
+	txExecLoadingWidget := container.NewBorder(nil, widget.NewLabelWithData(loadMessage), nil, nil,
+		loadWidget,
 	)
+	txExecLoadingWidget.Hide()
 
 	startTXexec := func(command string) {
 		txExecLoadingWidget.Show()
 		g.NodeInfo.executingStatus = true
 
 		loadMessage.Set(fmt.Sprintf("Executing <%v> command", command))
-		validatorControlButton.Disable()
-		maxRange := 40
-		for i := range maxRange {
-			time.Sleep(time.Second * time.Duration(i))
-			percentage := (i * 100) / maxRange
+		claimSeatButton.Disable()
+		var maxRange float64 = 40
+		for i := range int(maxRange) {
+			time.Sleep(time.Second * 1)
+			var percentage float64 = ((float64(i) * 100) / maxRange) * 0.01
+			log.Println("wait tx state:", percentage)
 			loadingData.Set(float64(percentage))
+			txExecLoadingWidget.Refresh()
+			loadWidget.SetValue(float64(percentage))
+			loadWidget.Refresh()
 
 		}
 		txExecLoadingWidget.Hide()
 		g.NodeInfo.executingStatus = false
 		refreshBinding.DataChanged()
+		claimSeatButton.Enable()
 	}
 
 	execFunc := func(args types.ExecSekaiCmd) {
@@ -254,13 +260,16 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		g.WaitDialog.ShowWaitDialog()
 		payload, err := json.Marshal(args)
 
-		log.Printf("Executing: %v", args)
+		log.Printf("Executing: %+v", args)
 		if err != nil {
 			g.showErrorDialog(err, binding.NewDataListener(func() {}))
 		}
-		httph.ExecHttpRequestBySSHTunnel(g.sshClient, types.SEKIN_EXECUTE_CMD_ENDPOINT, "POST", payload)
-		g.WaitDialog.HideWaitDialog()
-
+		out, err := httph.ExecHttpRequestBySSHTunnel(g.sshClient, types.SEKIN_EXECUTE_CMD_ENDPOINT, "POST", payload)
+		if err != nil {
+			log.Println("ERROR when executing payload:", err.Error())
+			g.showErrorDialog(err, binding.NewDataListener(func() {}))
+		}
+		log.Println("payload execution out:", string(out))
 		refreshBinding.DataChanged()
 	}
 
@@ -331,6 +340,11 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 				}
 			}
 		}
+		if g.NodeInfo.executingStatus {
+			txExecLoadingWidget.Show()
+			claimSeatButton.Disable()
+		}
+
 		nodeIDData.Set(dashboardData.NodeID)
 		topData.Set(dashboardData.Top)
 		validatorAddressData.Set(dashboardData.ValidatorAddress)
@@ -406,5 +420,5 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	validatorsTopPart := container.NewHBox(activeValidatorsBox, pausedValidatorsBox, inactiveValidatorsBox, jailedValidatorsBox, waitingValidatorsBox)
 
 	// return container.NewBorder(nil, refreshButton, nil, validatorsRightPart, mainInfo)
-	return container.NewBorder(container.NewCenter(validatorsTopPart), nil, nil, nil, mainInfo)
+	return container.NewBorder(container.NewCenter(validatorsTopPart), container.NewVBox(txExecLoadingWidget, claimSeatButton), nil, nil, mainInfo)
 }
