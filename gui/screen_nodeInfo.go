@@ -23,6 +23,8 @@ import (
 type nodeInfoScreen struct {
 	ctx       context.Context
 	ctxCancel context.CancelFunc
+
+	executingStatus bool
 }
 
 func makeNodeInfoScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
@@ -222,10 +224,37 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		widget.NewFormItem("Gen.SHA256:", genesisChecksumLabel),
 	)
 
-	execFunc := func(arg types.Cmd) {
+	loadingData := binding.NewFloat()
+
+	loadMessage := binding.NewString()
+	txExecLoadingWidget := container.NewHBox(
+		widget.NewProgressBarWithData(loadingData), widget.NewLabelWithData(loadMessage),
+	)
+
+	startTXexec := func(command string) {
+		txExecLoadingWidget.Show()
+		g.NodeInfo.executingStatus = true
+
+		loadMessage.Set(fmt.Sprintf("Executing <%v> command", command))
+		validatorControlButton.Disable()
+		maxRange := 40
+		for i := range maxRange {
+			time.Sleep(time.Second * time.Duration(i))
+			percentage := (i * 100) / maxRange
+			loadingData.Set(float64(percentage))
+
+		}
+		txExecLoadingWidget.Hide()
+		g.NodeInfo.executingStatus = false
+		refreshBinding.DataChanged()
+	}
+
+	execFunc := func(args types.ExecSekaiCmd) {
+		go startTXexec(string(args.TX))
 		g.WaitDialog.ShowWaitDialog()
-		payload, err := json.Marshal(types.ExecSekaiCmd{TX: arg})
-		log.Printf("Executing: %v", arg)
+		payload, err := json.Marshal(args)
+
+		log.Printf("Executing: %v", args)
 		if err != nil {
 			g.showErrorDialog(err, binding.NewDataListener(func() {}))
 		}
@@ -235,22 +264,27 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		refreshBinding.DataChanged()
 	}
 
+	monikerEntryData := binding.NewString()
+	claimDataListener := binding.NewDataListener(func() {
+		moniker, _ := monikerEntryData.Get()
+		execFunc(types.ExecSekaiCmd{TX: types.ClaimValidatorSeat, Moniker: moniker})
+	})
+
 	claimSeatButton.OnTapped = func() {
 		//claim seat
-		execFunc(types.ClaimValidatorSeat)
+		showMonikerEntryDialog(g, monikerEntryData, claimDataListener)
 	}
 	pauseValidatorFunc := func() {
 		// pause
-		execFunc(types.Pause)
+		execFunc(types.ExecSekaiCmd{TX: types.Pause})
 	}
 	unpauseValidatorFunc := func() {
 		// unpause tx
-		execFunc(types.Unpause)
+		execFunc(types.ExecSekaiCmd{TX: types.Unpause})
 	}
 	activateValidatorFunc := func() {
 		// activate
-		execFunc(types.Activate)
-
+		execFunc(types.ExecSekaiCmd{TX: types.Activate})
 	}
 
 	errBinding := binding.NewUntyped()
@@ -271,7 +305,7 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 			claimSeatButton.Hide()
 		}
 
-		if dashboardData.ValidatorStatus != "Unknown" {
+		if dashboardData.ValidatorStatus != "Unknown" && !g.NodeInfo.executingStatus {
 			status := strings.ToUpper(dashboardData.ValidatorStatus)
 			switch status {
 			case string(shidai.Active):

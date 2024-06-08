@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strings"
 	"sync"
 
 	"fyne.io/fyne/v2"
@@ -184,6 +185,40 @@ func showWarningMessageWithConfirmation(g *Gui, warningMessage string, confirmAc
 		container.NewVScroll(warningInfoLabel),
 	)
 	wizard = dialogWizard.NewWizard("WARNING!", content)
+	wizard.Show(g.Window)
+	wizard.Resize(fyne.NewSize(500, 400))
+}
+
+func showMonikerEntryDialog(g *Gui, monikerBinding binding.String, confirmAction binding.DataListener) {
+	var wizard *dialogWizard.Wizard
+
+	monikerEntry := widget.NewEntry()
+	monikerEntry.Wrapping = fyne.TextWrap(fyne.TextTruncateClip)
+	monikerEntry.MultiLine = true
+
+	doneButton := widget.NewButton("Claim", func() {
+		moniker := monikerEntry.Text
+		trimmed := strings.TrimSpace(moniker)
+		if trimmed == "" {
+			monikerEntry.SetValidationError(fmt.Errorf("moniker cannot be empty"))
+			return
+		}
+		monikerBinding.Set(moniker)
+		confirmAction.DataChanged()
+		wizard.Hide()
+	})
+	doneButton.Importance = widget.HighImportance
+
+	cancelButton := widget.NewButton("Cancel", func() { wizard.Hide() })
+
+	content := container.NewBorder(
+		nil,
+		container.NewVBox(doneButton, cancelButton),
+		nil, nil,
+		container.NewVScroll(monikerEntry),
+	)
+
+	wizard = dialogWizard.NewWizard("Enter your Moniker", content)
 	wizard.Show(g.Window)
 	wizard.Resize(fyne.NewSize(500, 400))
 }

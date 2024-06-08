@@ -143,6 +143,7 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener, shidaiInfra bin
 			}
 
 			// cmdForDeploy := fmt.Sprintf(`echo '%v' | sudo -S sh -c "$(curl -s --show-error --fail %v  2>&1 )"`, sP, types.BOOTSTRAP_SCRIPT)
+
 			cmdForDeploy := fmt.Sprintf(`echo '%v' | sudo -S sh -c "$(curl -s --show-error --fail %v  2>&1 --sekai=%v --interx=%v)"`, sP, types.BOOTSTRAP_SCRIPT, sekaiVersion, interxVersion)
 			showCmdExecDialogAndRunCmdV4(g, "Deploying", cmdForDeploy, true, deployErrorBinding, errorMessageBinding)
 

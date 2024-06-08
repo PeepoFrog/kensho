@@ -38,5 +38,6 @@ const (
 )
 
 type ExecSekaiCmd struct {
-	TX Cmd `json:"tx"` //pause, unpause, activate,
+	TX      Cmd    `json:"tx"` //pause, unpause, activate,
+	Moniker string `json:"moniker"`
 }
