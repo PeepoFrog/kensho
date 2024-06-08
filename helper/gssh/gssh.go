@@ -8,6 +8,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -244,4 +245,28 @@ func MakeSSHsessionForTerminalV2(client *ssh.Client) (*ssh.Session, error) {
 	}
 
 	return session, nil
+}
+
+func SendFileSFTP(client *ssh.Client, fileData []byte, remotePath string) error {
+	// Start an SFTP session over the existing SSH connection
+	sftpClient, err := sftp.NewClient(client)
+	if err != nil {
+		return fmt.Errorf("failed to create SFTP client: %v", err)
+	}
+	defer sftpClient.Close()
+	// client.User()
+	// client.
+	// Create the remote file
+	file, err := sftpClient.Create(remotePath)
+	if err != nil {
+		return fmt.Errorf("failed to create remote file: %v", err)
+	}
+	defer file.Close()
+
+	// Write data to the remote file
+	if _, err := file.Write(fileData); err != nil {
+		return fmt.Errorf("failed to write data to remote file: %v", err)
+	}
+
+	return nil
 }

@@ -77,11 +77,12 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 			log.Printf("ERROR: %v", err)
 			shidaiStatusInfo.SetText(STATUS_Unavailable)
 			shidaiStatusCheck.Set(false)
+			shidaiInfraCheck.Set(false)
 
 		} else {
 			log.Println("switching  shidai state")
 			shidaiStatusInfo.SetText(STATUS_Running)
-			shidaiInfraCheck.Set(shidaiStatus.Shidai.Infra)
+			shidaiInfraCheck.Set(true)
 			sekaiInfraCheck.Set(shidaiStatus.Sekai.Infra)
 			interxInfraCheck.Set(shidaiStatus.Interx.Infra)
 			shidaiStatusCheck.Set(true)
