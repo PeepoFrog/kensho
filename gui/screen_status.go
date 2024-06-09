@@ -1,7 +1,9 @@
 package gui
 
 import (
+	"encoding/json"
 	"log"
+	"strconv"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -14,17 +16,6 @@ import (
 func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 	const STATUS_Unavailable = "Unavailable"
 	const STATUS_Running = "Running"
-
-	// shidaiStatusBinding := binding.NewUntyped()
-
-	// getShidaiStatus := func() shidai.Status {
-	// 	status, _ := shidaiStatusBinding.Get()
-	// 	return status.(shidai.Status)
-	// }
-
-	// setShidaiStatus := func(status shidai.Status) {
-	// 	shidaiStatusBinding.Set(status)
-	// }
 
 	interxStatusCheck := binding.NewBool()
 	interxInfraCheck := binding.NewBool()
@@ -56,8 +47,30 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 	})
 	deployButton.Disable()
 
+	startButton := widget.NewButton("Start", func() {
+		g.WaitDialog.ShowWaitDialog()
+		var payloadStruct = types.RequestDeployPayload{
+			Command: "start",
+		}
+		payload, err := json.Marshal(payloadStruct)
+		if err != nil {
+			log.Println("ERROR when executing payload:", err.Error())
+			g.showErrorDialog(err, binding.NewDataListener(func() {}))
+			return
+		}
+		out, err := httph.ExecHttpRequestBySSHTunnel(g.sshClient, types.SEKIN_EXECUTE_ENDPOINT, "POST", payload)
+		if err != nil {
+			log.Println("ERROR when executing payload:", err.Error())
+			g.showErrorDialog(err, binding.NewDataListener(func() {}))
+			return
+		}
+		log.Println("START out:", string(out))
+		g.WaitDialog.HideWaitDialog()
+	})
+	startButton.Disable()
+
 	checkInterxStatus := func() {
-		_, err := httph.GetInterxStatus(g.Host.IP)
+		_, err := httph.GetInterxStatus(g.Host.IP, strconv.Itoa(types.DEFAULT_INTERX_PORT))
 		if err != nil {
 			log.Printf("ERROR getting interx status: %v", err)
 			interxStatusInfo.SetText(STATUS_Unavailable)
@@ -76,11 +89,12 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 			log.Printf("ERROR: %v", err)
 			shidaiStatusInfo.SetText(STATUS_Unavailable)
 			shidaiStatusCheck.Set(false)
+			shidaiInfraCheck.Set(false)
 
 		} else {
 			log.Println("switching  shidai state")
 			shidaiStatusInfo.SetText(STATUS_Running)
-			shidaiInfraCheck.Set(shidaiStatus.Shidai.Infra)
+			shidaiInfraCheck.Set(true)
 			sekaiInfraCheck.Set(shidaiStatus.Sekai.Infra)
 			interxInfraCheck.Set(shidaiStatus.Interx.Infra)
 			shidaiStatusCheck.Set(true)
@@ -125,7 +139,7 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 		}
 		if !deployButtonCheck {
 			if shidaiInfra && (!sekaiInfra && !interxInfra) {
-				deployButtonCheck = true
+				startButton.Enable()
 				log.Println("2st deploy check set", deployButtonCheck)
 			}
 		}
@@ -151,6 +165,7 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 	defer refresh()
 	return container.NewBorder(nil, refreshButton, nil, nil,
 		container.NewVBox(
+			startButton,
 			deployButton,
 			interxInfoBox,
 			sekaiInfoBox,

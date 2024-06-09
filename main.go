@@ -12,7 +12,8 @@ func main() {
 	w.SetMaster()
 	w.Resize(fyne.NewSize(1024, 768))
 	g := gui.Gui{
-		Window: w,
+		Window:  w,
+		Version: a.Metadata().Version,
 	}
 	g.WaitDialog = gui.NewWaitDialog(&g)
 	content := g.MakeGui()

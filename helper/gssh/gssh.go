@@ -8,6 +8,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -176,25 +177,84 @@ func streamOutput(ctx context.Context, reader io.Reader, outputChan chan<- strin
 }
 
 func ExecuteSSHCommandV3(client *ssh.Client, command string, outputChan chan<- string, resultChan chan<- ResultV2) {
+	log.Printf("RUNNING CMD:\n%s", command)
+	var err error
+	ctx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		resultChan <- ResultV2{Err: err}
+		cancel()
+	}()
+
 	session, err := client.NewSession()
 	if err != nil {
 		if err == io.EOF {
 			err = fmt.Errorf("ssh EOF, probably ssh server was down, please restart Kensho: %w", err)
 		}
 		log.Println("Error when creating new session: ", err.Error())
-
-		close(outputChan)
-		resultChan <- ResultV2{Err: err}
 		return
 	}
 	defer session.Close()
 
-	o, err := session.CombinedOutput(command)
+	// Setting up stdout and stderr pipes
+	stdoutPipe, err := session.StdoutPipe()
+	if err != nil {
+		log.Println("Error when creating stdoutPipe: ", err.Error())
+		return
+	}
+	stderrPipe, err := session.StderrPipe()
+	if err != nil {
+		log.Println("Error when creating stderrPipe: ", err.Error())
+		return
+	}
 
-	// outputChan <- "Command was executed successfully"
-	outputChan <- string(o)
-	resultChan <- ResultV2{Err: err}
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// Start the command
+	err = session.Start(command)
+	if err != nil {
+		log.Println("Error when starting new session: ", err.Error())
+		return
+	}
+
+	// Read from stdout and stderr concurrently
+	go func() {
+		defer wg.Done()
+		streamOutputV2(ctx, stdoutPipe, outputChan)
+	}()
+	go func() {
+		defer wg.Done()
+		streamOutputV2(ctx, stderrPipe, outputChan)
+	}()
+
+	err = session.Wait()
+	if err != nil {
+		log.Println("Error when waiting for session to finish: ", err.Error())
+	}
+
+	wg.Wait()
 	close(outputChan)
+}
+
+func streamOutputV2(ctx context.Context, reader io.Reader, outputChan chan<- string) {
+	scanner := bufio.NewScanner(reader)
+	for {
+		select {
+		case <-ctx.Done():
+			return // Exit if context is cancelled
+		default:
+			if scanner.Scan() {
+				select {
+				case outputChan <- scanner.Text():
+					log.Println(scanner.Text())
+				case <-ctx.Done():
+					return
+				}
+			} else {
+				return
+			}
+		}
+	}
 }
 
 func MakeSSHsessionForTerminal(client *ssh.Client) (*ssh.Session, error) {
@@ -244,4 +304,28 @@ func MakeSSHsessionForTerminalV2(client *ssh.Client) (*ssh.Session, error) {
 	}
 
 	return session, nil
+}
+
+func SendFileSFTP(client *ssh.Client, fileData []byte, remotePath string) error {
+	// Start an SFTP session over the existing SSH connection
+	sftpClient, err := sftp.NewClient(client)
+	if err != nil {
+		return fmt.Errorf("failed to create SFTP client: %v", err)
+	}
+	defer sftpClient.Close()
+	// client.User()
+	// client.
+	// Create the remote file
+	file, err := sftpClient.Create(remotePath)
+	if err != nil {
+		return fmt.Errorf("failed to create remote file: %v", err)
+	}
+	defer file.Close()
+
+	// Write data to the remote file
+	if _, err := file.Write(fileData); err != nil {
+		return fmt.Errorf("failed to write data to remote file: %v", err)
+	}
+
+	return nil
 }

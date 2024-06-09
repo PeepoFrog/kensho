@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	dialogWizard "github.com/KiraCore/kensho/gui/dialogs"
+	"github.com/KiraCore/kensho/helper/gssh"
 	"github.com/KiraCore/kensho/helper/httph"
 	"github.com/KiraCore/kensho/types"
 )
@@ -136,10 +138,41 @@ func showDeployDialog(g *Gui, doneListener binding.DataListener, shidaiInfra bin
 		sP, _ := sudoPasswordBinding.Get()
 		sInfra, _ := shidaiInfra.Get()
 		if !sInfra {
-			cmdForDeploy := fmt.Sprintf(`echo '%v' | sudo -S sh -c "$(curl -s --show-error --fail %v 2>&1)"`, sP, types.BOOTSTRAP_SCRIPT)
+			sekaiVersion, interxVersion, err := httph.GetBinariesVersionsFromTrustedNode(payload.Args.IP, strconv.Itoa(payload.Args.RPCPort), strconv.Itoa(payload.Args.InterxPort))
+			if err != nil {
+				g.showErrorDialog(err, binding.NewDataListener(func() {}))
+				return
+			}
+
+			bootstrapFileUrl := types.BOOTSTRAP_SCRIPT
+			filePathToSaveOnRemote := filepath.Join("/home/", g.sshClient.User(), "bootstrap.sh")
+			log.Println("Bootstrap file save path:", filePathToSaveOnRemote)
+			f, err := httph.MakeHttpRequest(bootstrapFileUrl, "GET")
+			if err != nil {
+				log.Println(err.Error())
+				g.showErrorDialog(fmt.Errorf("error when downloading bootstrap script: %v ", err.Error()), binding.NewDataListener(func() {}))
+				return
+			}
+			err = gssh.SendFileSFTP(g.sshClient, f, filePathToSaveOnRemote)
+			if err != nil {
+				log.Println(err.Error())
+				g.showErrorDialog(fmt.Errorf("error when sending bootstrap script to remove host: %v ", err.Error()), binding.NewDataListener(func() {}))
+				return
+			}
+
+			cmdForChmod := fmt.Sprintf(`chmod +x %v 2>&1`, filePathToSaveOnRemote)
+			showCmdExecDialogAndRunCmdV4(g, "Deploying", cmdForChmod, true, deployErrorBinding, errorMessageBinding)
+			errB, _ := deployErrorBinding.Get()
+			if errB {
+				errMsg, _ := errorMessageBinding.Get()
+				g.showErrorDialog(fmt.Errorf("error while checking the sudo password: %v ", errMsg), binding.NewDataListener(func() {}))
+				return
+			}
+
+			cmdForDeploy := fmt.Sprintf(`echo '%v' | sudo -S sh -c "%v --sekai=%v --interx=%v 2>&1"`, sP, filePathToSaveOnRemote, sekaiVersion, interxVersion)
 			showCmdExecDialogAndRunCmdV4(g, "Deploying", cmdForDeploy, true, deployErrorBinding, errorMessageBinding)
 
-			errB, _ := deployErrorBinding.Get()
+			errB, _ = deployErrorBinding.Get()
 			if errB {
 				errMsg, _ := errorMessageBinding.Get()
 				g.showErrorDialog(fmt.Errorf("error while checking the sudo password: %v ", errMsg), binding.NewDataListener(func() {}))
