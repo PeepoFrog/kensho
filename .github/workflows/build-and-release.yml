@@ -114,7 +114,6 @@ jobs:
           mv kensho-amd64.deb uploaded-artifacts/kensho-amd64.deb
           mv fyne-cross/dist/windows-amd64/Kensho.exe.zip uploaded-artifacts/Kensho-windows-amd64.zip
           mv fyne-cross/dist/windows-arm64/Kensho.exe.zip uploaded-artifacts/Kensho-windows-arm64.zip
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -134,7 +133,6 @@ jobs:
         with:
           name: kensho-packages
           path: downloaded-artifacts
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -154,7 +152,6 @@ jobs:
           asset_path: downloaded-artifacts/kensho-amd64.deb
           asset_name: kensho-amd64.deb
           asset_content_type: application/vnd.debian.binary-package
-  
       - name: Upload ARM64 DEB Package as Release Asset
         uses: actions/upload-release-asset@v1
         env:
@@ -164,7 +161,6 @@ jobs:
           asset_path: downloaded-artifacts/kensho-arm64.deb
           asset_name: kensho-arm64.deb
           asset_content_type: application/vnd.debian.binary-package
-  
       - name: Upload Windows AMD64 EXE Package as Release Asset
         uses: actions/upload-release-asset@v1
         env:
@@ -174,7 +170,6 @@ jobs:
           asset_path: downloaded-artifacts/Kensho-windows-amd64.zip
           asset_name: Kensho-windows-amd64.zip
           asset_content_type: application/zip
-  
       - name: Upload Windows ARM64 EXE Package as Release Asset
         uses: actions/upload-release-asset@v1
         env:
@@ -184,3 +179,17 @@ jobs:
           asset_path: downloaded-artifacts/Kensho-windows-arm64.zip
           asset_name: Kensho-windows-arm64.zip
           asset_content_type: application/zip
+
+      - name: Update image version in FyneApp.toml
+        run: |
+          VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
+          sed -i "s/Version = \"[0-9]*\.[0-9]*\.[0-9]*\"/Version = \"$VERSION\"/" FyneApp.toml
+      - name: Commit and push updated FyneApp.toml
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add FyneApp.toml
+          git commit -m "fix(cidi_auto): Update FyneApp.toml" \
+                     -m "Update version to ${{ steps.create_tag.outputs.new_tag }}"
+          git tag -a ${{ steps.create_tag.outputs.new_tag }} -m "Update version to ${{ steps.create_tag.outputs.new_tag }}"
+          git push
