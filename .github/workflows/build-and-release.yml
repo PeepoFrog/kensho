@@ -187,12 +187,12 @@ jobs:
         uses: actions/checkout@v4
       - name: Print the new tags
         run: |
-          echo "TAG: ${{ steps.build-and-ver.create_tag.outputs.new_tag }}"
-          VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
+          echo "TAG: ${{ needs.build-and-ver.outputs.new_version }}"
+          VERSION=$(echo ${{ needs.build-and-ver.outputs.new_version }} | sed 's/^v//')
           echo "VERSION: $VERSION"
       - name: Update image version in FyneApp.toml
         run: |
-          VERSION=$(echo ${{ steps.build-and-ver.create_tag.outputs.new_tag }} | sed 's/^v//')
+          VERSION=$(echo ${{ needs.build-and-ver.outputs.new_version }} | sed 's/^v//')
           sed -i "s/Version = \"[0-9]*\.[0-9]*\.[0-9]*\"/Version = \"$VERSION\"/" FyneApp.toml
 
       - name: Commit and push updated FyneApp.toml
