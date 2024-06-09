@@ -28,6 +28,8 @@ type Gui struct {
 	LogCtxCancel            context.CancelFunc
 	NodeInfo                nodeInfoScreen
 	TxExec                  TxExecBinding
+
+	Version string
 }
 
 type TxExecBinding struct {
@@ -100,7 +102,9 @@ func (g *Gui) MakeGui() fyne.CanvasObject {
 		info.SetText(t.Info)
 		mainWindow.Objects = []fyne.CanvasObject{t.View(g.Window, g)}
 	}
-	menuAndTab := container.NewHSplit(g.makeNav(setTab), tab)
+	versionData := binding.NewString()
+	versionData.Set(fmt.Sprintf("Version: %v", g.Version))
+	menuAndTab := container.NewHSplit(container.NewBorder(nil, widget.NewLabelWithData(versionData), nil, nil, g.makeNav(setTab)), tab)
 	menuAndTab.Offset = 0.2
 	return menuAndTab
 
