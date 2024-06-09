@@ -179,20 +179,18 @@ jobs:
           asset_path: downloaded-artifacts/Kensho-windows-arm64.zip
           asset_name: Kensho-windows-arm64.zip
           asset_content_type: application/zip
-  version_update:
+  bump_version:
     needs: build-and-ver
     runs-on: ubuntu-latest
     steps:
+      - name: Set up job-level environment variable
+        run: echo "VERSION=$(echo ${{ needs.build-and-ver.outputs.new_version }} | sed 's/^v//')" >> $GITHUB_ENV
+
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Print the new tags
-        run: |
-          echo "TAG: ${{ needs.build-and-ver.outputs.new_version }}"
-          VERSION=$(echo ${{ needs.build-and-ver.outputs.new_version }} | sed 's/^v//')
-          echo "VERSION: $VERSION"
+
       - name: Update image version in FyneApp.toml
         run: |
-          VERSION=$(echo ${{ needs.build-and-ver.outputs.new_version }} | sed 's/^v//')
           sed -i "s/Version = \"[0-9]*\.[0-9]*\.[0-9]*\"/Version = \"$VERSION\"/" FyneApp.toml
 
       - name: Commit and push updated FyneApp.toml
@@ -201,6 +199,6 @@ jobs:
           git config --global user.name "GitHub Actions"
           git add FyneApp.toml
           git commit -m "fix(cidi_auto): Update FyneApp.toml" \
-                     -m "Update version to ${{ steps.build-and-ver.create_tag.outputs.new_tag }}"
-          git tag -a ${{ steps.create_tag.outputs.new_tag }} -m "Update version to ${{ steps.create_tag.outputs.new_tag }}"
+                     -m "Update version to $VERSION"
+          git tag -a $VERSION -m "Update version to $VERSION"
           git push
