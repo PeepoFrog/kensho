@@ -200,5 +200,4 @@ jobs:
           git add FyneApp.toml
           git commit -m "fix(cidi_auto): Update FyneApp.toml" \
                      -m "Update version to $VERSION"
-          git tag -a "v$VERSION" -m "Update version to $VERSION"
           git push
