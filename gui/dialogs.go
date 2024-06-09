@@ -93,7 +93,7 @@ func showCmdExecDialogAndRunCmdV4(g *Gui, infoMSG string, cmd string, autoHideCh
 	outputChannel := make(chan string)
 	errorChannel := make(chan gssh.ResultV2)
 	// go gssh.ExecuteSSHCommandV2(g.sshClient, cmd, outputChannel, errorChannel)
-	go gssh.ExecuteSSHCommandV2(g.sshClient, cmd, outputChannel, errorChannel)
+	go gssh.ExecuteSSHCommandV3(g.sshClient, cmd, outputChannel, errorChannel)
 
 	var wizard *dialogWizard.Wizard
 	outputMsg := binding.NewString()

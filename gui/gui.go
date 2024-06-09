@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -26,6 +27,12 @@ type Gui struct {
 	LogCtx                  context.Context
 	LogCtxCancel            context.CancelFunc
 	NodeInfo                nodeInfoScreen
+	TxExec                  TxExecBinding
+}
+
+type TxExecBinding struct {
+	TxExecutionStatusBinding binding.Bool
+	TxDoneListener           binding.DataListener
 }
 type Host struct {
 	IP string
@@ -42,14 +49,39 @@ func (g *Gui) MakeGui() fyne.CanvasObject {
 	reconnectButton.Hide()
 	reconnectButton.Importance = widget.DangerImportance
 
-	tab := container.NewBorder(container.NewVBox(title, info), reconnectButton, nil, nil, mainWindow)
+	loadingData := binding.NewFloat()
+
+	loadWidget := widget.NewProgressBarWithData(loadingData)
+	g.TxExec.TxDoneListener = binding.NewDataListener(func() {})
+	txExecLoadingWidget := container.NewStack(loadWidget)
+	txExecLoadingWidget.Hide()
+	g.TxExec.TxExecutionStatusBinding = binding.NewBool()
+	g.TxExec.TxExecutionStatusBinding.AddListener(binding.NewDataListener(func() {
+		state, _ := g.TxExec.TxExecutionStatusBinding.Get()
+		log.Println("TxExecutionStatusBinding state:", state)
+		if state {
+			txExecLoadingWidget.Show()
+			var maxRange float64 = 40
+			for i := range int(maxRange) {
+				time.Sleep(time.Second * 1)
+				var percentage float64 = ((float64(i) * 100) / maxRange) * 0.01
+				// log.Println("wait tx state:", percentage)
+				loadingData.Set(float64(percentage))
+				// txExecLoadingWidget.Refresh()
+				loadWidget.SetValue(float64(percentage))
+				loadWidget.Refresh()
+			}
+			g.TxExec.TxDoneListener.DataChanged()
+			g.TxExec.TxExecutionStatusBinding.Set(false)
+			txExecLoadingWidget.Hide()
+		}
+	}))
+
+	tab := container.NewBorder(container.NewVBox(title, info), container.NewVBox(txExecLoadingWidget, reconnectButton), nil, nil, mainWindow)
 
 	g.ConnectionStatusBinding = binding.NewBool()
 	g.ConnectionStatusBinding.AddListener(binding.NewDataListener(func() {
-		state, err := g.ConnectionStatusBinding.Get()
-		if err != nil {
-			log.Printf("error when getting connection status binding: %v", err)
-		}
+		state, _ := g.ConnectionStatusBinding.Get()
 		if state {
 			g.Window.SetTitle(fmt.Sprintf("%v (connected)", appName))
 			reconnectButton.Hide()
@@ -62,6 +94,7 @@ func (g *Gui) MakeGui() fyne.CanvasObject {
 			}
 		}
 	}))
+
 	setTab := func(t Tab) {
 		title.SetText(t.Title)
 		info.SetText(t.Info)

@@ -23,41 +23,26 @@ import (
 type nodeInfoScreen struct {
 	ctx       context.Context
 	ctxCancel context.CancelFunc
-
-	executingStatus bool
 }
 
 func makeNodeInfoScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
-
-	// nodeInfoTab := container.NewTabItem("Node Info", makeNodeInfoTab(g))
-	// validatorInfoTab := container.NewTabItem("Validator Info", makeValidatorInfoTab(g))
-	// return container.NewAppTabs(nodeInfoTab, validatorInfoTab)
-
 	return makeNodeInfoTab(g)
 }
 
 func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
-	// TODO: only for testing, delete later
-	// g.Host.IP = "148.251.69.56"
+
 	ctx := context.Background()
 	g.NodeInfo.ctx, g.NodeInfo.ctxCancel = context.WithCancel(ctx)
 
 	var claimSeat bool
-	// latest block box
 	var refreshBinding binding.DataListener
 
 	validatorControlButton := widget.NewButton("", func() {})
 	validatorControlButton.Disable()
 	validatorControlButton.Hide()
 
-	claimSeatButton := widget.NewButton("Claim validator seat", func() {})
-	claimSeatButton.Hide()
-
 	latestBlockData := binding.NewString()
 	latestBlockLabel := widget.NewLabelWithData(latestBlockData)
-	// latestBlockBox := container.NewHBox(
-	// 	widget.NewLabel("Block:"), latestBlockLabel,
-	// )
 
 	// validator address box
 	validatorAddressData := binding.NewString()
@@ -78,66 +63,36 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	//validator status (active, paused, etc...)
 	validatorStatusData := binding.NewString()
 	validatorStatusLabel := widget.NewLabelWithData(validatorStatusData)
-	// validatorStatusBox := container.NewHBox(
-	// 	widget.NewLabel("Val.Status:\t\t"), validatorStatusLabel,
-	// 	validatorControlButton,
-	// )
+
 	// nodeID
 	nodeIDData := binding.NewString()
 	nodeIDLabel := widget.NewLabelWithData(nodeIDData)
-	// nodeIDBox := container.NewHBox(
-	// 	widget.NewLabel("Val.NodeID:\t\t"), nodeIDLabel,
-	// )
 
 	topData := binding.NewString()
 	topLabel := widget.NewLabelWithData(topData)
-	// topBox := container.NewHBox(
-	// 	widget.NewLabel("Rank:\t\t"), topLabel,
-	// )
 
 	// miss chance box
 	missChanceData := binding.NewString()
 	missChanceLabel := widget.NewLabelWithData(missChanceData)
-	// missChanceBox := container.NewHBox(
-	// 	widget.NewLabel("Miss:\t\t"), missChanceLabel,
-	// )
 
 	lastProducedBlockData := binding.NewString()
 	lastProducedLabel := widget.NewLabelWithData(lastProducedBlockData)
-	// lastProducedBox := container.NewHBox(
-	// 	widget.NewLabel("Latest Block:\t\t"), lastProducedLabel,
-	// )
 
 	// miss Chance Confidence box
 	missChanceConfidenceData := binding.NewString()
 	missChanceConfidenceLabel := widget.NewLabelWithData(missChanceConfidenceData)
-	// missChanceConfidenceBox := container.NewHBox(
-	// 	widget.NewLabel("Miss conf.\t\t"), missChanceConfidenceLabel,
-	// )
 
 	startHeightData := binding.NewString()
 	startHeightLabel := widget.NewLabelWithData(startHeightData)
-	// startHeightBox := container.NewHBox(
-	// 	widget.NewLabel("Start Height:\t\t"), startHeightLabel,
-	// )
 
 	producedBlocksData := binding.NewString()
 	producedBlocksLabel := widget.NewLabelWithData(producedBlocksData)
-	// producedBlocksBox := container.NewHBox(
-	// 	widget.NewLabel("Produced:\t\t"), producedBlocksLabel,
-	// )
 
 	monikerData := binding.NewString()
 	monikerLabel := widget.NewLabelWithData(monikerData)
-	// monikerBox := container.NewHBox(
-	// 	widget.NewLabel("Moniker:\t\t"), monikerLabel,
-	// )
 
 	genesisChecksumData := binding.NewString()
 	genesisChecksumLabel := widget.NewLabelWithData(genesisChecksumData)
-	// genesisChecksumBox := container.NewHBox(
-	// 	widget.NewLabel("Gen. SHA256::\t\t"), genesisChecksumLabel,
-	// )
 
 	nodeCatchingData := binding.NewString()
 	nodeCatchingLabel := widget.NewLabelWithData(nodeCatchingData)
@@ -196,16 +151,9 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	chainIDData := binding.NewString()
 	chainIDLabel := widget.NewLabelWithData(chainIDData)
 
-	// dateData := binding.NewString()
-	// dateLabel := widget.NewLabelWithData(dateData)
-	// dateBox := container.NewHBox(
-	// 	widget.NewLabel("Date:\t\t"), dateLabel,
-	// )
-
 	streakData := binding.NewString()
 	streakLabel := widget.NewLabelWithData(streakData)
 
-	//
 	valuesForm := widget.NewForm(
 		widget.NewFormItem("ChainID:", chainIDLabel),
 		widget.NewFormItem("Moniker:", monikerLabel),
@@ -223,52 +171,24 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		widget.NewFormItem("Val.NodeID:", nodeIDLabel),
 		widget.NewFormItem("Gen.SHA256:", genesisChecksumLabel),
 	)
-
-	loadingData := binding.NewFloat()
-	loadWidget := widget.NewProgressBarWithData(loadingData)
-	loadMessage := binding.NewString()
-	txExecLoadingWidget := container.NewBorder(nil, widget.NewLabelWithData(loadMessage), nil, nil,
-		loadWidget,
-	)
-	txExecLoadingWidget.Hide()
-
-	startTXexec := func(command string) {
-		txExecLoadingWidget.Show()
-		g.NodeInfo.executingStatus = true
-
-		loadMessage.Set(fmt.Sprintf("Executing <%v> command", command))
-		claimSeatButton.Disable()
-		var maxRange float64 = 40
-		for i := range int(maxRange) {
-			time.Sleep(time.Second * 1)
-			var percentage float64 = ((float64(i) * 100) / maxRange) * 0.01
-			log.Println("wait tx state:", percentage)
-			loadingData.Set(float64(percentage))
-			txExecLoadingWidget.Refresh()
-			loadWidget.SetValue(float64(percentage))
-			loadWidget.Refresh()
-
-		}
-		txExecLoadingWidget.Hide()
-		g.NodeInfo.executingStatus = false
-		refreshBinding.DataChanged()
-		claimSeatButton.Enable()
-	}
-
 	execFunc := func(args types.ExecSekaiCmd) {
-		go startTXexec(string(args.TX))
-		g.WaitDialog.ShowWaitDialog()
-		payload, err := json.Marshal(args)
+		g.TxExec.TxExecutionStatusBinding.Set(true)
+		// g.WaitDialog.ShowWaitDialog()
+
+		request := types.RequestTXPayload{Command: "tx", Args: args}
+		payload, err := json.Marshal(request)
 
 		log.Printf("Executing: %+v", args)
 		if err != nil {
 			g.showErrorDialog(err, binding.NewDataListener(func() {}))
 		}
-		out, err := httph.ExecHttpRequestBySSHTunnel(g.sshClient, types.SEKIN_EXECUTE_CMD_ENDPOINT, "POST", payload)
+		out, err := httph.ExecHttpRequestBySSHTunnel(g.sshClient, types.SEKIN_EXECUTE_ENDPOINT, "POST", payload)
 		if err != nil {
 			log.Println("ERROR when executing payload:", err.Error())
 			g.showErrorDialog(err, binding.NewDataListener(func() {}))
+			return
 		}
+
 		log.Println("payload execution out:", string(out))
 		refreshBinding.DataChanged()
 	}
@@ -279,7 +199,7 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		execFunc(types.ExecSekaiCmd{TX: types.ClaimValidatorSeat, Moniker: moniker})
 	})
 
-	claimSeatButton.OnTapped = func() {
+	claimValidatorSeatFunc := func() {
 		//claim seat
 		showMonikerEntryDialog(g, monikerEntryData, claimDataListener)
 	}
@@ -297,6 +217,7 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 	}
 
 	errBinding := binding.NewUntyped()
+
 	refreshScreen := func() {
 		g.WaitDialog.ShowWaitDialog()
 		defer g.WaitDialog.HideWaitDialog()
@@ -307,44 +228,72 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		}
 
 		log.Printf("dashboard %+v", dashboardData)
-		claimSeat = dashboardData.SeatClaimAvailable
-		if claimSeat {
-			claimSeatButton.Show()
-		} else {
-			claimSeatButton.Hide()
-		}
 
-		if dashboardData.ValidatorStatus != "Unknown" && !g.NodeInfo.executingStatus {
-			status := strings.ToUpper(dashboardData.ValidatorStatus)
-			switch status {
-			case string(shidai.Active):
+		txExec, _ := g.TxExec.TxExecutionStatusBinding.Get()
+
+		if dashboardData.ValidatorStatus != "Unknown" || dashboardData.SeatClaimAvailable {
+			validatorControlButton.Enable()
+			log.Println("txExec =", txExec)
+			if txExec {
+				if validatorControlButton.Hidden {
+					validatorControlButton.Show()
+				}
+				validatorControlButton.Disable()
+			} else {
+				if validatorControlButton.Hidden {
+					validatorControlButton.Show()
+				}
 				if validatorControlButton.Disabled() {
 					validatorControlButton.Enable()
-					validatorControlButton.Show()
-					validatorControlButton.SetText("Pause")
-					validatorControlButton.OnTapped = pauseValidatorFunc
 				}
-			case string(shidai.Paused):
-				if validatorControlButton.Disabled() {
-					validatorControlButton.Enable()
-					validatorControlButton.Show()
-					validatorControlButton.SetText("Unpause")
-					validatorControlButton.OnTapped = unpauseValidatorFunc
+
+				status := strings.ToUpper(dashboardData.ValidatorStatus)
+				claimSeat = dashboardData.SeatClaimAvailable
+				if claimSeat {
+					if validatorControlButton.Disabled() {
+						validatorControlButton.Enable()
+					}
+					if validatorControlButton.Hidden {
+						validatorControlButton.Show()
+					}
+					validatorControlButton.SetText("Claim Validator Seat")
+					validatorControlButton.OnTapped = claimValidatorSeatFunc
+				} else {
+					switch status {
+					case string(shidai.Active):
+						if validatorControlButton.Disabled() {
+							validatorControlButton.Enable()
+						}
+						if validatorControlButton.Hidden {
+							validatorControlButton.Show()
+						}
+						validatorControlButton.SetText("Pause")
+						validatorControlButton.OnTapped = pauseValidatorFunc
+					case string(shidai.Paused):
+						if validatorControlButton.Disabled() {
+							validatorControlButton.Enable()
+						}
+						if validatorControlButton.Hidden {
+							validatorControlButton.Show()
+						}
+						validatorControlButton.SetText("Unpause")
+						validatorControlButton.OnTapped = unpauseValidatorFunc
+
+					case string(shidai.Inactive):
+						if validatorControlButton.Disabled() {
+							validatorControlButton.Enable()
+						}
+						if validatorControlButton.Hidden {
+							validatorControlButton.Show()
+						}
+						validatorControlButton.SetText("Activate")
+						validatorControlButton.OnTapped = activateValidatorFunc
+					}
 				}
-			case string(shidai.Inactive):
-				if validatorControlButton.Disabled() {
-					validatorControlButton.Enable()
-					validatorControlButton.Show()
-					validatorControlButton.SetText("Activate")
-					validatorControlButton.OnTapped = activateValidatorFunc
-				}
+
 			}
 		}
-		if g.NodeInfo.executingStatus {
-			txExecLoadingWidget.Show()
-			claimSeatButton.Disable()
-		}
-
+		validatorControlButton.Refresh()
 		nodeIDData.Set(dashboardData.NodeID)
 		topData.Set(dashboardData.Top)
 		validatorAddressData.Set(dashboardData.ValidatorAddress)
@@ -366,7 +315,6 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		waitingValidatorsData.Set(dashboardData.WaitingValidators)
 		genesisChecksumData.Set(dashboardData.GenesisChecksum)
 		chainIDData.Set(dashboardData.ChainID)
-		// dateData.Set(dashboardData.Date)
 		streakData.Set(dashboardData.Streak)
 
 		if dashboardData.CatchingUp {
@@ -374,9 +322,6 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		} else {
 			nodeCatchingData.Set("Running")
 		}
-		// dashboardData.CatchingUp,
-		// widget.NewLabel()
-
 	}
 	refreshBinding = binding.NewDataListener(func() {
 		refreshScreen()
@@ -388,6 +333,8 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 			}
 		}
 	})
+	g.TxExec.TxDoneListener = binding.NewDataListener(func() { refreshBinding.DataChanged() })
+
 	go func() {
 		refreshTime := 20 * time.Second
 		log.Printf("Starting goroutine with refresh rate %v", refreshTime)
@@ -413,12 +360,11 @@ func makeNodeInfoTab(g *Gui) fyne.CanvasObject {
 		container.NewVBox(
 			widget.NewSeparator(),
 			valuesForm,
-			validatorControlButton,
 		),
 	)
 
 	validatorsTopPart := container.NewHBox(activeValidatorsBox, pausedValidatorsBox, inactiveValidatorsBox, jailedValidatorsBox, waitingValidatorsBox)
 
 	// return container.NewBorder(nil, refreshButton, nil, validatorsRightPart, mainInfo)
-	return container.NewBorder(container.NewCenter(validatorsTopPart), container.NewVBox(txExecLoadingWidget, claimSeatButton), nil, nil, mainInfo)
+	return container.NewBorder(container.NewCenter(validatorsTopPart), validatorControlButton, nil, nil, mainInfo)
 }

@@ -37,6 +37,10 @@ const (
 	ClaimValidatorSeat Cmd = "claim_seat"
 )
 
+type RequestTXPayload struct {
+	Command string       `json:"command"`
+	Args    ExecSekaiCmd `json:"args"`
+}
 type ExecSekaiCmd struct {
 	TX      Cmd    `json:"tx"` //pause, unpause, activate,
 	Moniker string `json:"moniker"`

@@ -186,6 +186,12 @@ func ExecHttpRequestBySSHTunnel(sshClient *ssh.Client, address, method string, p
 
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("Non-2xx response received: %d %s", resp.StatusCode, string(bodyBytes))
+		return nil, fmt.Errorf("HTTP request failed with status code %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
 	out, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err

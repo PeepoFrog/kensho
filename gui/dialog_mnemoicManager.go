@@ -20,6 +20,8 @@ func showMnemonicManagerDialog(g *Gui, mnemonicBinding binding.String, doneActio
 	var wizard *dialogWizard.Wizard
 	mnemonicDisplay := container.NewGridWithColumns(2)
 	localMnemonicBinding := binding.NewString()
+	oldM, _ := mnemonicBinding.Get()
+	localMnemonicBinding.Set(oldM)
 	warningConfirmDataListener := binding.NewDataListener(func() {
 		lMnemonic, err := localMnemonicBinding.Get()
 		if err != nil {
