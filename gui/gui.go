@@ -73,8 +73,8 @@ func (g *Gui) MakeGui() fyne.CanvasObject {
 				loadWidget.SetValue(float64(percentage))
 				loadWidget.Refresh()
 			}
-			g.TxExec.TxDoneListener.DataChanged()
 			g.TxExec.TxExecutionStatusBinding.Set(false)
+			g.TxExec.TxDoneListener.DataChanged()
 			txExecLoadingWidget.Hide()
 		}
 	}))
