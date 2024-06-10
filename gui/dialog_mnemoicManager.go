@@ -111,6 +111,11 @@ If you have not please press "Return" and save your mnemonic.`
 			g.showErrorDialog(err, binding.NewDataListener(func() {}))
 			return
 		}
+		err = localMnemonicBinding.Set(masterMnemonic.String())
+		if err != nil {
+			g.showErrorDialog(err, binding.NewDataListener(func() {}))
+			return
+		}
 
 		mnemonicChanged.DataChanged()
 	})
