@@ -85,7 +85,7 @@ func (g *Gui) MakeGui() fyne.CanvasObject {
 	g.ConnectionStatusBinding.AddListener(binding.NewDataListener(func() {
 		state, _ := g.ConnectionStatusBinding.Get()
 		if state {
-			g.Window.SetTitle(fmt.Sprintf("%v (connected)", appName))
+			g.Window.SetTitle(fmt.Sprintf("%v (connected) - %v", appName, g.Host.IP))
 			reconnectButton.Hide()
 			tab.Refresh()
 		} else {
@@ -104,7 +104,9 @@ func (g *Gui) MakeGui() fyne.CanvasObject {
 	}
 	versionData := binding.NewString()
 	versionData.Set(fmt.Sprintf("Version: %v", g.Version))
-	menuAndTab := container.NewHSplit(container.NewBorder(nil, widget.NewLabelWithData(versionData), nil, nil, g.makeNav(setTab)), tab)
+	versionLabel := widget.NewLabelWithData(versionData)
+	versionLabel.Alignment = fyne.TextAlignCenter
+	menuAndTab := container.NewHSplit(container.NewBorder(nil, versionLabel, nil, nil, g.makeNav(setTab)), tab)
 	menuAndTab.Offset = 0.2
 	return menuAndTab
 
