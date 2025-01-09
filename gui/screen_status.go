@@ -125,7 +125,6 @@ func makeStatusScreen(_ fyne.Window, g *Gui) fyne.CanvasObject {
 				log.Println("start button enabled")
 			} else {
 				startButton.Disable()
-				stopButton.Disable()
 				log.Println("start button disabled")
 			}
 		} else {
