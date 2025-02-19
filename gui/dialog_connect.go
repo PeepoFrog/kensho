@@ -190,7 +190,7 @@ func (g *Gui) ShowConnect() {
 							passphraseCheck.SetChecked(true)
 						}
 
-						c, err = gssh.MakeSSH_ClientWithPrivKeyAndPassphrase(address, userEntry.Text, b, []byte(passphraseEntry.Text))
+						c, err = gssh.MakeSSH_ClientWithPrivKeyAndPassphrase(context.Background(), address, userEntry.Text, b, []byte(passphraseEntry.Text))
 						if err != nil {
 							log.Printf("error when creating ssh client: %v", err.Error())
 							return nil, err
@@ -200,7 +200,7 @@ func (g *Gui) ShowConnect() {
 							passphraseCheck.SetChecked(false)
 
 						}
-						c, err = gssh.MakeSSH_ClientWithPrivKey(address, userEntry.Text, b)
+						c, err = gssh.MakeSSH_ClientWithPrivKey(context.Background(), address, userEntry.Text, b)
 						if err != nil {
 							return nil, err
 						}

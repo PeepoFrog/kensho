@@ -34,14 +34,14 @@ func MakeSSH_ClientWithPassword(ctx context.Context, ipAndPort, user, psswrd str
 
 	clientConn, channels, requests, err := ssh.NewClientConn(conn, ipAndPort, config)
 	if err != nil {
-		conn.Close() 
+		conn.Close()
 		return nil, err
 	}
 
 	return ssh.NewClient(clientConn, channels, requests), nil
 }
 
-func MakeSSH_ClientWithPrivKey(ipAndPort, user string, key []byte) (*ssh.Client, error) {
+func MakeSSH_ClientWithPrivKey(ctx context.Context, ipAndPort, user string, key []byte) (*ssh.Client, error) {
 	signer, err := ssh.ParsePrivateKey(key)
 	if err != nil {
 		return nil, err
@@ -54,14 +54,22 @@ func MakeSSH_ClientWithPrivKey(ipAndPort, user string, key []byte) (*ssh.Client,
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
-	client, err := ssh.Dial("tcp", ipAndPort, config)
+	dialer := &net.Dialer{}
+	conn, err := dialer.DialContext(ctx, "tcp", ipAndPort)
 	if err != nil {
 		return nil, err
 	}
-	return client, nil
+
+	clientConn, channels, requests, err := ssh.NewClientConn(conn, ipAndPort, config)
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	return ssh.NewClient(clientConn, channels, requests), nil
 }
 
-func MakeSSH_ClientWithPrivKeyAndPassphrase(ipAndPort, user string, key, passphrase []byte) (*ssh.Client, error) {
+func MakeSSH_ClientWithPrivKeyAndPassphrase(ctx context.Context, ipAndPort, user string, key, passphrase []byte) (*ssh.Client, error) {
 	signer, err := ssh.ParsePrivateKeyWithPassphrase(key, passphrase)
 	if err != nil {
 		return nil, err
@@ -73,11 +81,19 @@ func MakeSSH_ClientWithPrivKeyAndPassphrase(ipAndPort, user string, key, passphr
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
-	client, err := ssh.Dial("tcp", ipAndPort, config)
+	dialer := &net.Dialer{}
+	conn, err := dialer.DialContext(ctx, "tcp", ipAndPort)
 	if err != nil {
 		return nil, err
 	}
-	return client, nil
+
+	clientConn, channels, requests, err := ssh.NewClientConn(conn, ipAndPort, config)
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	return ssh.NewClient(clientConn, channels, requests), nil
 }
 
 func CheckIfPassphraseNeeded(privateKeyBytes []byte) (bool, error) {
