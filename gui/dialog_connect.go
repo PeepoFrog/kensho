@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -207,7 +208,7 @@ func (g *Gui) ShowConnect() {
 					return c, nil
 				}()
 			} else {
-				g.sshClient, err = gssh.MakeSHH_ClientWithPassword(address, userEntry.Text, passwordEntry.Text)
+				g.sshClient, err = gssh.MakeSSH_ClientWithPassword(context.Background(), address, userEntry.Text, passwordEntry.Text)
 			}
 			if err != nil {
 				log.Println("ERROR submitting:", err.Error())

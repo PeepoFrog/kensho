@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"sync"
 
 	"github.com/pkg/sftp"
@@ -16,7 +17,7 @@ type ResultV2 struct {
 	Err error
 }
 
-func MakeSHH_ClientWithPassword(ipAndPort, user, psswrd string) (*ssh.Client, error) {
+func MakeSSH_ClientWithPassword(ctx context.Context, ipAndPort, user, psswrd string) (*ssh.Client, error) {
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
@@ -25,12 +26,19 @@ func MakeSHH_ClientWithPassword(ipAndPort, user, psswrd string) (*ssh.Client, er
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	// Connect to the SSH server
-	client, err := ssh.Dial("tcp", ipAndPort, config)
+	dialer := &net.Dialer{}
+	conn, err := dialer.DialContext(ctx, "tcp", ipAndPort)
 	if err != nil {
 		return nil, err
 	}
-	return client, nil
+
+	clientConn, channels, requests, err := ssh.NewClientConn(conn, ipAndPort, config)
+	if err != nil {
+		conn.Close() 
+		return nil, err
+	}
+
+	return ssh.NewClient(clientConn, channels, requests), nil
 }
 
 func MakeSSH_ClientWithPrivKey(ipAndPort, user string, key []byte) (*ssh.Client, error) {
